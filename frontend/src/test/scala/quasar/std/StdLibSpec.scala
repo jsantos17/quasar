@@ -41,6 +41,8 @@ abstract class StdLibSpec extends Qspec {
   def isPrintableAscii(c: Char): Boolean = c >= '\u0020' && c <= '\u007e'
   def isPrintableAscii(s: String): Boolean = s.forall(isPrintableAscii)
 
+  val runAt: Instant = Instant.parse("2014-11-17T00:00:00Z")
+
   def beCloseTo(expected: Data): Matcher[Data] = new Matcher[Data] {
     def isClose(x: BigDecimal, y: BigDecimal, err: Double): Boolean =
       x == y || ((x - y).abs/(y.abs max err)).toDouble < err
@@ -653,6 +655,12 @@ abstract class StdLibSpec extends Qspec {
             StartOfDay(_).embed,
             Data.Date(x),
             Data.Timestamp(x.atStartOfDay(UTC).toInstant))
+        }
+      }
+
+      "Now" >> {
+        "now" >> {
+          nullary(Fix(Now()), Data.Timestamp(runAt))
         }
       }
 

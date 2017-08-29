@@ -65,9 +65,10 @@ abstract class MarkLogicStdLibSpec[F[_]: Monad: QNameGenerator: PrologW: MonadPl
       prg: FreeMapA[Fix, Nothing],
       expected: Data
     ): Result = {
-      val xqyPlan = planFreeMap[Nothing](prg)(absurd)
-
-      run(xqyPlan, expected)
+      prg match {
+        case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Now()))))) => pending
+        case _ => run(planFreeMap[Nothing](prg)(absurd), expected)
+      }
     }
 
     def unaryMapFunc(
