@@ -826,7 +826,7 @@ object MongoDbPlanner {
         case MFC(Not((_, v))) =>
           v.map { case (sel, inputs) => (sel andThen (_.negate), inputs.map(There(0, _))) }
 
-        case MFC(Guard(_, typ, cont, _)) =>
+        case MFC(Guard(_, typ, (Embed(MFC(Constant(_))), contSel), _)) =>
           def selCheck: Type => Option[BsonField => Selector] =
             generateTypeCheck[BsonField, Selector](Selector.Or(_, _)) {
               case Type.Null => ((f: BsonField) =>  Selector.Doc(f -> Selector.Type(BsonType.Null)))
@@ -855,7 +855,7 @@ object MongoDbPlanner {
           selCheck(typ).fold[OutputM[PartialSelector[T]]](
             -\/(InternalError.fromMsg(node.map(_._1).shows)))(
             f =>
-            \/-(cont._2.fold[PartialSelector[T]](
+            \/-(contSel.fold[PartialSelector[T]](
               κ(({ case List(field) => f(field) }, List(There(0, Here[T]())))),
               { case (f2, p2) =>
                 ({ case head :: tail => Selector.And(f(head), f2(tail)) },
