@@ -87,6 +87,9 @@ class PlannerSpec extends
   val expr3_2Fp: ExprOp3_2F.fixpoint[Fix[ExprOp], ExprOp] =
     new ExprOp3_2F.fixpoint[Fix[ExprOp], ExprOp](_.embed)
   import expr3_2Fp._
+  val expr3_4Fp: ExprOp3_4F.fixpoint[Fix[ExprOp], ExprOp] =
+    new ExprOp3_4F.fixpoint[Fix[ExprOp], ExprOp](_.embed)
+  import expr3_4Fp._
 
   val basePath = rootDir[Sandboxed] </> dir("db")
 
@@ -592,19 +595,19 @@ class PlannerSpec extends
     }
 
     "plan array length" in {
-      plan(sqlE"select array_length(bar, 1) from foo") must
+      plan(sqlE"select array_length(bar, 1) from zips") must
        beWorkflow(chain[Workflow](
-         $read(collection("db", "foo")),
+         $read(collection("db", "zips")),
          $project(
            reshape("value" ->
              $cond(
                $and(
                  $lte($literal(Bson.Arr()), $field("bar")),
-                 $lt($field("bar"), $literal(Bson.Binary.fromArray(scala.Array[Byte]())))),
+                 $lt($field("bar"), $literal(Bson.Doc()))),
                $size($field("bar")),
-               $literal(Bson.Undefined))),
+               $strLenCP($field("bar")))),
            ExcludeId)))
-    }.pendingUntilFixed(notOnPar)
+    }
 
     "plan sum in expression" in {
       plan(sqlE"select sum(pop) * 100 from zips") must

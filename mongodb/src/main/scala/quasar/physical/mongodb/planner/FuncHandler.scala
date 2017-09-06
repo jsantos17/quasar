@@ -275,10 +275,15 @@ object FuncHandler {
               def apply[A](mfc: MapFuncCore[T, A]): OptionFree[EX, A] = {
                 val fp26 = new ExprOpCoreF.fixpoint[Free[EX, A], EX](Free.roll)
                 val fp34 = new ExprOp3_4F.fixpoint[Free[EX, A], EX](Free.roll)
+
                 import fp26._, fp34._
 
                 mfc.some collect {
-                  case Length(a1) => $strLenCP(a1)
+                  case Length(a1) =>
+                    $cond($and(
+                      $lte($literal(Bson.Text("")), a1),
+                      $lt(a1, $literal(Bson.Doc()))),
+                      $strLenCP(a1), $size(a1))
                   case Split(a1, a2) => $split(a1, a2)
                   case Substring(a1, a2, a3) =>
                     $cond(
