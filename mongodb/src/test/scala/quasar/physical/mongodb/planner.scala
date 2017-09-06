@@ -69,13 +69,14 @@ class PlannerSpec extends
   case class equalToWorkflow(expected: Workflow)
       extends Matcher[Crystallized[WorkflowF]] {
     def apply[S <: Crystallized[WorkflowF]](s: Expectable[S]) = {
-      def diff(l: S, r: Workflow): String = {
+      def diff(l: Crystallized[WorkflowF], r: Crystallized[WorkflowF]): String = {
         val lt = RenderTree[Crystallized[WorkflowF]].render(l)
+
         (lt diff r.render).shows
       }
       result(expected == s.value.op,
-             "\ntrees are equal:\n" + diff(s.value, expected),
-             "\ntrees are not equal:\n" + diff(s.value, expected),
+             "\ntrees are equal:\n" + diff(s.value, Crystallized(expected)),
+             "\ntrees are not equal:\n" + diff(s.value, Crystallized(expected)),
              s)
     }
   }
@@ -146,6 +147,15 @@ class PlannerSpec extends
     } yield repr
   }
 
+  val defaultStats: Collection => Option[CollectionStatistics] =
+    κ(CollectionStatistics(10, 100, false).some)
+  val defaultIndexes: Collection => Option[Set[Index]] =
+    κ(Set(Index("_id_", NonEmptyList(BsonField.Name("_id") -> IndexType.Ascending), false)).some)
+
+  def indexes(ps: (Collection, BsonField)*): Collection => Option[Set[Index]] =  {
+    val map: Map[Collection, Set[Index]] = ps.toList.foldMap { case (c, f) => Map(c -> Set(Index(f.asText + "_", NonEmptyList(f -> IndexType.Ascending), false))) }
+    c => map.get(c).orElse(defaultIndexes(c))
+  }
   def plan0(query: Fix[Sql], model: MongoQueryModel,
     stats: Collection => Option[CollectionStatistics],
     indexes: Collection => Option[Set[Index]]
@@ -158,27 +168,20 @@ class PlannerSpec extends
   def plan3_0(query: Fix[Sql]): Either[FileSystemError, Crystallized[WorkflowF]] =
     plan0(query, MongoQueryModel.`3.0`, κ(None), κ(None))
 
-  def plan3_2(query: Fix[Sql],
+  def plan3_2(query: Fix[Sql]): Either[FileSystemError, Crystallized[WorkflowF]] =
+    plan0(query, MongoQueryModel.`3.2`, defaultStats, defaultIndexes)
+
+  def plan3_4(query: Fix[Sql],
     stats: Collection => Option[CollectionStatistics],
     indexes: Collection => Option[Set[Index]]
   ): Either[FileSystemError, Crystallized[WorkflowF]] =
-    plan0(query, MongoQueryModel.`3.2`, stats, indexes)
-
-  val defaultStats: Collection => Option[CollectionStatistics] =
-    κ(CollectionStatistics(10, 100, false).some)
-  val defaultIndexes: Collection => Option[Set[Index]] =
-    κ(Set(Index("_id_", NonEmptyList(BsonField.Name("_id") -> IndexType.Ascending), false)).some)
-
-  def indexes(ps: (Collection, BsonField)*): Collection => Option[Set[Index]] =  {
-    val map: Map[Collection, Set[Index]] = ps.toList.foldMap { case (c, f) => Map(c -> Set(Index(f.asText + "_", NonEmptyList(f -> IndexType.Ascending), false))) }
-    c => map.get(c).orElse(defaultIndexes(c))
-  }
+    plan0(query, MongoQueryModel.`3.4`, stats, indexes)
 
   def plan(query: Fix[Sql]): Either[FileSystemError, Crystallized[WorkflowF]] =
-    plan0(query, MongoQueryModel.`3.2`, defaultStats, defaultIndexes)
+    plan0(query, MongoQueryModel.`3.4`, defaultStats, defaultIndexes)
 
   def planAt(time: Instant, query: Fix[Sql]): Either[FileSystemError, Crystallized[WorkflowF]] =
-    queryPlanner(query, MongoQueryModel.`3.2`, defaultStats, defaultIndexes, listContents, time).run.value.toEither
+    queryPlanner(query, MongoQueryModel.`3.4`, defaultStats, defaultIndexes, listContents, time).run.value.toEither
 
   def planLP(logical: Fix[LP]): Either[FileSystemError, Crystallized[WorkflowF]] = {
     (for {
@@ -309,7 +312,7 @@ class PlannerSpec extends
     }
 
     "plan concat (3.2+)" in {
-      plan3_2(sqlE"select concat(bar, baz) from foo", defaultStats, defaultIndexes) must
+      plan3_2(sqlE"select concat(bar, baz) from foo") must
        beWorkflow(chain[Workflow](
          $read(collection("db", "foo")),
          $project(
@@ -579,7 +582,7 @@ class PlannerSpec extends
     }
 
     "plan select array element (3.2+)" in {
-      plan3_2(sqlE"select loc[0] from zips", defaultStats, defaultIndexes) must
+      plan3_2(sqlE"select loc[0] from zips") must
       beWorkflow(chain[Workflow](
         $read(collection("db", "zips")),
         $project(
@@ -596,17 +599,34 @@ class PlannerSpec extends
 
     "plan array length" in {
       plan(sqlE"select array_length(bar, 1) from zips") must
+      beWorkflow(chain[Workflow](
+        $read(collection("db", "zips")),
+        $project(
+          reshape("value" ->
+            $cond(
+              $and($lte($literal(Bson.Arr()), $field("bar")),
+                $lt($field("bar"), $literal(Bson.Binary.fromArray(scala.Array[Byte]())))),
+              $cond(
+                $and(
+                  $lte($literal(Bson.Text("")), $field("bar")),
+                  $lt($field("bar"), $literal(Bson.Doc()))),
+                $strLenCP($field("bar")),
+                $size($field("bar"))),
+              $literal(Bson.Undefined))),
+          ExcludeId)))
+    }
+
+    "plan array length -3.2" in {
+      plan3_2(sqlE"select array_length(bar, 1) from zips") must
        beWorkflow(chain[Workflow](
          $read(collection("db", "zips")),
-         $project(
-           reshape("value" ->
-             $cond(
-               $and(
-                 $lte($literal(Bson.Arr()), $field("bar")),
-                 $lt($field("bar"), $literal(Bson.Doc()))),
-               $size($field("bar")),
-               $strLenCP($field("bar")))),
-           ExcludeId)))
+         $simpleMap(
+           NonEmptyList(MapExpr(JsFn(Name("x"),
+             If(
+               Call(Select(ident("Array"), "isArray"), List(Select(ident("_"), "bar"))),
+               Call(ident("NumberLong"), List(Select(Select(ident("_"), "bar"), "length"))),
+               ident(Js.Undefined.ident))))),
+             ListMap())))
     }
 
     "plan sum in expression" in {
@@ -713,38 +733,29 @@ class PlannerSpec extends
            ExcludeId)))
     }
 
-    "plan simple js filter" in {
-      val mjs = javascript[JsCore](_.embed)
-      import mjs._
-
-      plan(sqlE"select * from zips where length(city) < 4") must
+    "plan simple js filter 3.2" in {
+      plan3_2(sqlE"select * from zips where length(city) < 4") must
       beWorkflow(chain[Workflow](
         $read(collection("db", "zips")),
         // FIXME: Inline this $simpleMap with the $match (SD-456)
         $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"), obj(
-          "__tmp2" ->
-          If(
-            isString(Select(ident("x"), "city")),
-            BinOp(Lt,
-              Call(ident("NumberLong"),
-                List(Select(Select(ident("x"), "city"), "length"))),
-                Literal(Js.Num(4, false))),
-            ident(Js.Undefined.ident)),
-          "__tmp3" -> ident("x"))))),
+          "0" -> Select(ident("x"), "city"),
+          "1" -> Call(ident("NumberLong"), List(Select(Select(ident("x"), "city"), "length"))),
+          "src" -> ident("x"))))),
           ListMap()),
-        $match(
-          Selector.Doc(
-            BsonField.Name("__tmp2") -> Selector.Eq(Bson.Bool(true)))),
+        $match(Selector.And(
+          Selector.Doc(BsonField.Name("0") -> Selector.Type(BsonType.Text)),
+          Selector.Doc(BsonField.Name("1") -> Selector.Lt(Bson.Int32(4))))),
         $project(
-          reshape("value" -> $field("__tmp3")),
+          reshape("value" -> $field("src")),
           ExcludeId)))
-    }.pendingUntilFixed(notOnPar)
+    }
 
     "plan filter with js and non-js" in {
       val mjs = javascript[JsCore](_.embed)
       import mjs._
 
-      plan(sqlE"select * from zips where length(city) < 4 and pop < 20000") must
+      plan3_2(sqlE"select * from zips where length(city) < 4 and pop < 20000") must
       beWorkflow(chain[Workflow](
         $read(collection("db", "zips")),
         // FIXME: Inline this $simpleMap with the $match (SD-456)
@@ -777,7 +788,7 @@ class PlannerSpec extends
         $project(
           reshape("value" -> $field("__tmp7")),
           ExcludeId)))
-    }.pendingUntilFixed(notOnPar)
+    }
 
     "plan filter with between" in {
       plan(sqlE"select * from foo where bar between 10 and 100") must
@@ -806,7 +817,7 @@ class PlannerSpec extends
     }
 
     "plan filter with LIKE and OR" in {
-      plan(sqlE"""select * from foo where bar like "A%" or bar like "Z%" """) must
+      plan3_2(sqlE"""select * from foo where bar like "A%" or bar like "Z%" """) must
        beWorkflow(chain[Workflow](
          $read(collection("db", "foo")),
          $match(
@@ -821,7 +832,7 @@ class PlannerSpec extends
                  Selector.Type(BsonType.Text)),
                Selector.Doc(BsonField.Name("bar") ->
                  Selector.Regex("^Z.*$", false, true, false, false)))))))
-    }.pendingUntilFixed(notOnPar)
+    }
 
     "plan filter with field in constant set" in {
       plan(sqlE"""select * from zips where state in ("AZ", "CO")""") must
@@ -1139,8 +1150,8 @@ class PlannerSpec extends
         beWorkflow($read(collection("db", "zips")))
     }
 
-    "select partially-applied substing" in {
-      plan (sqlE"""select substring("abcdefghijklmnop", 5, pop / 10000) from zips""") must
+    "select partially-applied substring" in {
+      plan3_2(sqlE"""select substring("abcdefghijklmnop", 5, pop / 10000) from zips""") must
         beWorkflow(chain[Workflow](
           $read(collection("db", "zips")),
           $project(
@@ -1442,7 +1453,7 @@ class PlannerSpec extends
     }.pendingUntilFixed(notOnPar)
 
     "plan count and js expr" in {
-      plan(sqlE"SELECT COUNT(*) as cnt, LENGTH(city) FROM zips") must
+      plan3_2(sqlE"SELECT COUNT(*) as cnt, LENGTH(city) FROM zips") must
         beWorkflow {
           chain[Workflow](
             $read(collection("db", "zips")),
@@ -1460,7 +1471,7 @@ class PlannerSpec extends
               \/-($literal(Bson.Null))),
             $unwind(DocField("1")))
         }
-    }.pendingUntilFixed(notOnPar)
+    }
 
     "plan trivial group by" in {
       plan(sqlE"select city from zips group by city") must
@@ -1909,7 +1920,7 @@ class PlannerSpec extends
     }.pendingUntilFixed(notOnPar)
 
     "plan simple JS inside expression" in {
-      plan(sqlE"select length(city) + 1 from zips") must
+      plan3_2(sqlE"select length(city) + 1 from zips") must
         beWorkflow(chain[Workflow](
           $read(collection("db", "zips")),
           $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"),
@@ -2004,7 +2015,7 @@ class PlannerSpec extends
     }
 
     "plan array project with concat (3.2+)" in {
-      plan3_2(sqlE"select city, loc[0] from zips", defaultStats, defaultIndexes) must
+      plan3_2(sqlE"select city, loc[0] from zips") must
         beWorkflow {
           chain[Workflow](
             $read(collection("db", "zips")),
@@ -2600,23 +2611,40 @@ class PlannerSpec extends
     }.pendingUntilFixed(notOnPar)
 
     "plan select length()" in {
-      plan(sqlE"select length(city) from zips") must
+      plan3_2(sqlE"select length(city) from zips") must
         beWorkflow(chain[Workflow](
           $read(collection("db", "zips")),
-          $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"), obj(
-            "__tmp2" ->
-              If(Call(ident("isString"), List(Select(ident("x"), "city"))),
-                Call(ident("NumberLong"),
-                  List(Select(Select(ident("x"), "city"), "length"))),
-                ident("undefined")))))),
-            ListMap()),
-          $project(
-            reshape("value" -> $field("__tmp2")),
-            ExcludeId)))
-    }.pendingUntilFixed(notOnPar)
+          $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"),
+            If(Call(ident("isString"),
+              List(Select(ident("x"), "city"))),
+              Call(ident("NumberLong"), List(Select(Select(ident("x"), "city"), "length"))),
+              ident("undefined"))))),
+          ListMap())))
+    }
 
     "plan select length() and simple field" in {
       plan(sqlE"select city, length(city) from zips") must
+      beWorkflow(chain[Workflow](
+        $read(collection("db", "zips")),
+        $project(
+          reshape(
+            "city" -> $field("city"),
+            "1" ->
+              $cond($and(
+                $lte($literal(Bson.Text("")), $field("city")),
+                $lt($field("city"), $literal(Bson.Doc()))),
+                $cond(
+                  $and(
+                    $lte($literal(Bson.Text("")), $field("city")),
+                    $lt($field("city"), $literal(Bson.Doc()))),
+                  $strLenCP($field("city")),
+                  $size($field("city"))),
+                $literal(Bson.Undefined))),
+          IgnoreId)))
+    }
+
+    "plan select length() and simple field 3.2" in {
+      plan3_2(sqlE"select city, length(city) from zips") must
       beWorkflow(chain[Workflow](
         $read(collection("db", "zips")),
         $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"), obj(
@@ -2787,8 +2815,7 @@ class PlannerSpec extends
     }
 
     "plan convert to timestamp in map-reduce" in {
-
-      plan(sqlE"select length(name), to_timestamp(epoch) from foo") must beWorkflow {
+      plan3_2(sqlE"select length(name), to_timestamp(epoch) from foo") must beWorkflow {
         chain[Workflow](
           $read(collection("db", "foo")),
           $simpleMap(
@@ -2921,7 +2948,7 @@ class PlannerSpec extends
     "plan simple join with sharded inputs" in {
       // NB: cannot use $lookup, so fall back to the old approach
       val query = sqlE"select zips2.city from zips join zips2 on zips.`_id` = zips2.`_id`"
-      plan3_2(query,
+      plan3_4(query,
         c => Map(
           collection("db", "zips") -> CollectionStatistics(10, 100, true),
           collection("db", "zips2") -> CollectionStatistics(15, 150, true)).get(c),
@@ -3040,7 +3067,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("#1560")
 
     "plan simple inner equi-join ($lookup)" in {
-      plan3_2(
+      plan3_4(
         sqlE"select foo.name, bar.address from foo join bar on foo.id = bar.foo_id",
         defaultStats,
         indexes(collection("db", "bar") -> BsonField.Name("foo_id"))) must
@@ -3074,7 +3101,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("#1560")
 
     "plan simple inner equi-join with expression ($lookup)" in {
-      plan3_2(
+      plan3_4(
         sqlE"select foo.name, bar.address from foo join bar on lower(foo.id) = bar.foo_id",
         defaultStats,
         indexes(collection("db", "bar") -> BsonField.Name("foo_id"))) must
@@ -3112,7 +3139,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("#1560")
 
     "plan simple inner equi-join with pre-filtering ($lookup)" in {
-      plan3_2(
+      plan3_4(
         sqlE"select foo.name, bar.address from foo join bar on foo.id = bar.foo_id where bar.rating >= 4",
         defaultStats,
         indexes(collection("db", "foo") -> BsonField.Name("id"))) must
@@ -3246,7 +3273,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("#1560")
 
     "plan simple left equi-join ($lookup)" in {
-      plan3_2(
+      plan3_4(
         sqlE"select foo.name, bar.address from foo left join bar on foo.id = bar.foo_id",
         defaultStats,
         indexes(collection("db", "bar") -> BsonField.Name("foo_id"))) must
@@ -3278,7 +3305,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("TODO: left/right joins in $lookup")
 
     "plan simple right equi-join ($lookup)" in {
-      plan3_2(
+      plan3_4(
         sqlE"select foo.name, bar.address from foo right join bar on foo.id = bar.foo_id",
         defaultStats,
         indexes(collection("db", "bar") -> BsonField.Name("foo_id"))) must
@@ -3380,7 +3407,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("#1560")
 
     "plan 3-way equi-join ($lookup)" in {
-      plan3_2(
+      plan3_4(
         sqlE"select foo.name, bar.address, baz.zip from foo join bar on foo.id = bar.foo_id join baz on bar.id = baz.bar_id",
         defaultStats,
         indexes(
@@ -3442,7 +3469,7 @@ class PlannerSpec extends
     }.pendingUntilFixed("#1560")
 
     "plan count of $lookup" in {
-      plan3_2(
+      plan3_4(
         sqlE"select tp.`_id`, count(*) from `zips` as tp join `largeZips` as ti on tp.`_id` = ti.TestProgramId group by tp.`_id`",
         defaultStats,
         indexes()) must
