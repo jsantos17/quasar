@@ -34,7 +34,6 @@ import scala.math.{abs, round}
 
 import com.marklogic.xcc.ContentSource
 import matryoshka._
-import matryoshka.patterns._
 import matryoshka.data.Fix
 import org.scalacheck.{Arbitrary, Gen}, Arbitrary.arbitrary
 import org.specs2.execute._
@@ -47,13 +46,13 @@ abstract class MarkLogicStdLibSpec[F[_]: Monad: QNameGenerator: PrologW: MonadPl
 
   def ignoreSome(prg: FreeMapA[Fix, BinaryArg], arg1: Data, arg2: Data)(run: => Result): Result =
     (prg, arg1, arg2) match {
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Eq(_,_))))), Data.Date(_), Data.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Lt(_,_))))), Data.Date(_), Data.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Lte(_,_))))), Data.Date(_), Data.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Gt(_,_))))), Data.Date(_), Data.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Gte(_,_))))), Data.Date(_), Data.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Split(_,_))))), _, _) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Within(_,_))))), _, _) => pending
+      case (ExtractFunc(MapFuncsCore.Eq(_,_)), Data.Date(_), Data.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Lt(_,_)), Data.Date(_), Data.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Lte(_,_)), Data.Date(_), Data.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Gt(_,_)), Data.Date(_), Data.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Gte(_,_)), Data.Date(_), Data.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Split(_,_)), _, _) => pending
+      case (ExtractFunc(MapFuncsCore.Within(_,_)), _, _) => pending
       case _ => run
     }
 

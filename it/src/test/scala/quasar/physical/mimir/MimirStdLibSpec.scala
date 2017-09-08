@@ -34,12 +34,12 @@ import org.specs2.specification.{AfterAll, Scope}
 
 import java.time.LocalDate
 
-import matryoshka.{AlgebraM, Embed}
+import matryoshka.AlgebraM
 import matryoshka.data.Fix
 import matryoshka.implicits._
 import matryoshka.patterns._
 
-import scalaz.{\/, \/-, Id}
+import scalaz.{\/, Id}
 import scalaz.syntax.applicative._
 import scalaz.syntax.either._
 
@@ -55,34 +55,34 @@ class MimirStdLibSpec extends StdLibSpec with PrecogCake {
 
   private def skipBinary(prg: FreeMapA[Fix, BinaryArg], arg1: Data, arg2: Data)(run: => Result): Result =
     (prg, arg1, arg2) match {
-      case (ExtractBin(MapFuncsCore.ConcatArrays(_,_)), Data.Arr(_), Data.Str(_)) => notImplemented
-      case (ExtractBin(MapFuncsCore.ConcatArrays(_,_)), Data.Str(_), Data.Arr(_)) => notImplemented
-      case (ExtractBin(MapFuncsCore.ConcatArrays(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.ConcatArrays(_,_)), Data.Arr(_), Data.Str(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.ConcatArrays(_,_)), Data.Str(_), Data.Arr(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.ConcatArrays(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
 
-      case (ExtractBin(MapFuncsCore.Eq(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Eq(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
 
-      case (ExtractBin(MapFuncsCore.Lt(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
-      case (ExtractBin(MapFuncsCore.Lt(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Lt(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Lt(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
 
-      case (ExtractBin(MapFuncsCore.Lte(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
-      case (ExtractBin(MapFuncsCore.Lte(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Lte(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Lte(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
 
-      case (ExtractBin(MapFuncsCore.Gt(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
-      case (ExtractBin(MapFuncsCore.Gt(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Gt(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Gt(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
 
-      case (ExtractBin(MapFuncsCore.Gte(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
-      case (ExtractBin(MapFuncsCore.Gte(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Gte(_,_)), Data.Str(_), Data.Str(_)) => notImplemented
+      case (ExtractFunc(MapFuncsCore.Gte(_,_)), Data.Date(_), Data.Timestamp(_)) => notImplemented
 
-      case (ExtractBin(MapFuncsCore.Add(_,_)), Data.Int(_), Data.Dec(_)) => notImplemented // FIXME implemented: should be working
-      case (ExtractBin(MapFuncsCore.Add(_,_)), Data.Dec(_), Data.Int(_)) => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Add(_,_)), Data.Int(_), Data.Dec(_)) => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Add(_,_)), Data.Dec(_), Data.Int(_)) => notImplemented // FIXME implemented: should be working
 
-      case (ExtractBin(MapFuncsCore.Subtract(_,_)), Data.Dec(_), Data.Dec(_)) => notImplemented // FIXME implemented: should be working
-      case (ExtractBin(MapFuncsCore.Subtract(_,_)), Data.Int(_), Data.Dec(_)) => notImplemented // FIXME implemented: should be working
-      case (ExtractBin(MapFuncsCore.Subtract(_,_)), Data.Dec(_), Data.Int(_)) => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Subtract(_,_)), Data.Dec(_), Data.Dec(_)) => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Subtract(_,_)), Data.Int(_), Data.Dec(_)) => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Subtract(_,_)), Data.Dec(_), Data.Int(_)) => notImplemented // FIXME implemented: should be working
 
-      case (ExtractBin(MapFuncsCore.Power(_,_)), Data.Int(_), Data.Int(one)) if one.toInt == 1 => notImplemented // FIXME implemented: should be working
-      case (ExtractBin(MapFuncsCore.Power(_,_)), Data.Dec(_), Data.Int(one)) if one.toInt == 1 => notImplemented // FIXME implemented: should be working
-      case (ExtractBin(MapFuncsCore.Power(_,_)), Data.Int(_), Data.Int(two)) if two.toInt == 2 => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Power(_,_)), Data.Int(_), Data.Int(one)) if one.toInt == 1 => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Power(_,_)), Data.Dec(_), Data.Int(one)) if one.toInt == 1 => notImplemented // FIXME implemented: should be working
+      case (ExtractFunc(MapFuncsCore.Power(_,_)), Data.Int(_), Data.Int(two)) if two.toInt == 2 => notImplemented // FIXME implemented: should be working
 
       case _ => run
     }
@@ -221,13 +221,6 @@ class MimirStdLibSpec extends StdLibSpec with PrecogCake {
   }
 
   tests(runner)
-
-  private object ExtractBin {
-    def unapply(fma: FreeMapA[Fix, BinaryArg]): Option[Binary[Fix, _]] = fma match {
-      case Embed(CoEnv(\/-(MFC(bin: Binary[Fix, _])))) => Some(bin)
-      case _ => None
-    }
-  }
 }
 
 trait PrecogCake extends Scope with AfterAll {

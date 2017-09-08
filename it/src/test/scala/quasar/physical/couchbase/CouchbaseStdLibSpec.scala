@@ -52,24 +52,24 @@ class CouchbaseStdLibSpec extends StdLibSpec {
 
   def ignoreSomeUnary(prg: FreeMapA[Fix, UnaryArg], arg: QData)(run: => Result): Result =
     (prg, arg) match {
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Length(_))))), QData.Str(s)) if !isPrintableAscii(s) =>
+      case (ExtractFunc(MapFuncsCore.Length(_)), QData.Str(s)) if !isPrintableAscii(s) =>
         Pending("only printable ascii supported")
       case _ => run
     }
 
   def ignoreSomeBinary(prg: FreeMapA[Fix, BinaryArg], arg1: QData, arg2: QData)(run: => Result): Result =
     (prg, arg1, arg2) match {
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Eq(_,_))))), QData.Date(_), QData.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Lt(_,_))))), QData.Date(_), QData.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Lte(_,_))))), QData.Date(_), QData.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Gt(_,_))))), QData.Date(_), QData.Timestamp(_)) => pending
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Gte(_,_))))), QData.Date(_), QData.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Eq(_,_)), QData.Date(_), QData.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Lt(_,_)), QData.Date(_), QData.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Lte(_,_)), QData.Date(_), QData.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Gt(_,_)), QData.Date(_), QData.Timestamp(_)) => pending
+      case (ExtractFunc(MapFuncsCore.Gte(_,_)), QData.Date(_), QData.Timestamp(_)) => pending
       case _ => run
     }
 
   def ignoreSomeTernary(prg: FreeMapA[Fix, TernaryArg], arg1: QData, arg2: QData, arg3: QData)(run: => Result): Result =
     (prg, arg1, arg2, arg3) match {
-      case (Embed(CoEnv(\/-(MFC(MapFuncsCore.Substring(_,_,_))))), QData.Str(s), _, _) if !isPrintableAscii(s) =>
+      case (ExtractFunc(MapFuncsCore.Substring(_,_,_)), QData.Str(s), _, _) if !isPrintableAscii(s) =>
         Pending("only printable ascii supported")
       case _ => run
     }

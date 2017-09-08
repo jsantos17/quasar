@@ -351,6 +351,7 @@ lazy val mongodb = project
   .settings(targetSettings)
   .settings(
     libraryDependencies ++= Dependencies.mongodb,
+    scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "40"),
     wartremoverWarnings in (Compile, compile) --= Seq(
       Wart.AsInstanceOf,
       Wart.Equals,

@@ -125,7 +125,7 @@ object MapFuncCore {
             Nil)(
             (mf, acc) => (mf.project.run.toOption >>=
               {
-                case MFC(MakeMap(Embed(CoEnv(\/-(MFC(Constant(k))))), v)) => ((k, v) :: acc).some
+                case MFC(MakeMap(ExtractFunc(Constant(k)), v)) => ((k, v) :: acc).some
                 case MFC(Constant(Embed(EX(ejson.Map(kvs))))) =>
                   (kvs.map(_.map(v => rollMF[T, A](MFC(Constant(v))).embed)) ++ acc).some
                 case _ => None
@@ -228,9 +228,9 @@ object MapFuncCore {
           EC.inj(ejson.Str(v1.toUpperCase)).some
 
         // structural
-        case MFC(MakeArray(Embed(CoEnv(\/-(MFC(Constant(v1))))))) =>
+        case MFC(MakeArray(ExtractFunc(Constant(v1)))) =>
           EC.inj(ejson.Arr(List(v1))).some
-        case MFC(MakeMap(ConstEC(ejson.Str(v1)), Embed(CoEnv(\/-(MFC(Constant(v2))))))) =>
+        case MFC(MakeMap(ConstEC(ejson.Str(v1)), ExtractFunc(Constant(v2)))) =>
           EX.inj(ejson.Map(List(EC.inj(ejson.Str[T[ejson.EJson]](v1)).embed -> v2))).some
         case MFC(ConcatArrays(ConstEC(ejson.Arr(v1)), ConstEC(ejson.Arr(v2)))) =>
           EC.inj(ejson.Arr(v1 ++ v2)).some
@@ -262,7 +262,7 @@ object MapFuncCore {
       case func =>
         val writer =
           func.traverse[Writer[List[(FreeMapA[T, A], Type)], ?], FreeMapA[T, A]] {
-            case Embed(CoEnv(\/-(MFC(Guard(e, t, s, Embed(CoEnv(\/-(MFC(Undefined()))))))))) =>
+            case Embed(CoEnv(\/-(MFC(Guard(e, t, s, ExtractFunc(Undefined())))))) =>
               Writer(List((e, t)), s)
             case arg => Writer(Nil, arg)
           }
@@ -286,40 +286,40 @@ object MapFuncCore {
   def extractFilter[T[_[_]]: BirecursiveT: EqualT, A: Equal](mf: FreeMapA[T, A])(test: A => Option[Hole])
     : Option[(FreeMap[T], FreeMapA[T, A], FreeMapA[T, A] => Option[FreeMapA[T, A]])] =
     mf.resume.swap.toOption >>= {
-      case MFC(Cond(c, e, Embed(CoEnv(\/-(MFC(Undefined())))))) =>
+      case MFC(Cond(c, e, ExtractFunc(Undefined()))) =>
         c.traverse(test) ∘ ((_, e, {
-          case Embed(CoEnv(\/-(MFC(Cond(c1, e1, Embed(CoEnv(\/-(MFC(Undefined()))))))))) =>
+          case Embed(CoEnv(\/-(MFC(Cond(c1, e1, ExtractFunc(Undefined())))))) =>
             (c1 ≟ c) option e1
 
           case _ => none
         }))
 
-      case MFC(Cond(c, Embed(CoEnv(\/-(MFC(Undefined())))), f)) =>
+      case MFC(Cond(c, ExtractFunc(Undefined()), f)) =>
         c.traverse(test) ∘ (h => (Free.roll(MFC(Not[T, FreeMap[T]](h))), f, {
-          case Embed(CoEnv(\/-(MFC(Cond(c1, Embed(CoEnv(\/-(MFC(Undefined())))), f1))))) =>
+          case Embed(CoEnv(\/-(MFC(Cond(c1, ExtractFunc(Undefined()), f1))))) =>
             (c1 ≟ c) option f1
 
           case _ => none
         }))
 
-      case MFC(Guard(c, t, e, Embed(CoEnv(\/-(MFC(Undefined())))))) =>
+      case MFC(Guard(c, t, e, ExtractFunc(Undefined()))) =>
         c.traverse(test) ∘ (h => (
           Free.roll(MFC(Guard(h, t, BoolLit[T, Hole](true), BoolLit[T, Hole](false)))),
           e,
           {
-            case Embed(CoEnv(\/-(MFC(Guard(c1, t1, e1, Embed(CoEnv(\/-(MFC(Undefined()))))))))) =>
+            case Embed(CoEnv(\/-(MFC(Guard(c1, t1, e1, ExtractFunc(Undefined())))))) =>
               (c1 ≟ c && t1 ≟ t) option e1
 
             case _ => none
           }
         ))
 
-      case MFC(Guard(c, t, Embed(CoEnv(\/-(MFC(Undefined())))), f)) =>
+      case MFC(Guard(c, t, ExtractFunc(Undefined()), f)) =>
         c.traverse(test) ∘ (h => (
           Free.roll(MFC(Guard(h, t, BoolLit[T, Hole](false), BoolLit[T, Hole](true)))),
           f,
           {
-            case Embed(CoEnv(\/-(MFC(Guard(c1, t1, Embed(CoEnv(\/-(MFC(Undefined())))), f1))))) =>
+            case Embed(CoEnv(\/-(MFC(Guard(c1, t1, ExtractFunc(Undefined()), f1))))) =>
               (c1 ≟ c && t1 ≟ t) option f1
 
             case _ => none
@@ -351,13 +351,13 @@ object MapFuncCore {
         rollMF[T, A](
           MFC(Constant(EJson.fromCommon(ejson.Bool[T[EJson]](true))))).some
 
-      case Eq(Embed(CoEnv(\/-(MFC(Constant(v1))))), Embed(CoEnv(\/-(MFC(Constant(v2)))))) =>
+      case Eq(ExtractFunc(Constant(v1)), ExtractFunc(Constant(v2))) =>
         rollMF[T, A](
           MFC(Constant(EJson.fromCommon(ejson.Bool[T[EJson]](v1 ≟ v2))))).some
 
       case DeleteField(
         Embed(StaticMap(map)),
-        Embed(CoEnv(\/-(MFC(Constant(field)))))) =>
+        ExtractFunc(Constant(field))) =>
         StaticMap(map.filter(_._1 ≠ field)).project.some
 
       // TODO: Generalize this to `StaticMapSuffix`.
@@ -369,13 +369,13 @@ object MapFuncCore {
 
       case ProjectIndex(
         Embed(StaticArrayPrefix(as)),
-        Embed(CoEnv(\/-(MFC(Constant(Embed(EX(ejson.Int(index)))))))))
+        ExtractFunc(Constant(Embed(EX(ejson.Int(index))))))
           if index.isValidInt =>
         as.lift(index.intValue).map(_.project)
 
       case ProjectField(
         Embed(StaticMap(map)),
-        Embed(CoEnv(\/-(MFC(Constant(field)))))) =>
+        ExtractFunc(Constant(field))) =>
         map.reverse.find(_._1 ≟ field) ∘ (_._2.project)
 
       // TODO: Generalize these to `StaticMapSuffix`

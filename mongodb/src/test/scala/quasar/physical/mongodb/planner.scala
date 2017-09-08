@@ -734,18 +734,24 @@ class PlannerSpec extends
     }
 
     "plan simple js filter 3.2" in {
+      val mjs = javascript[JsCore](_.embed)
+      import mjs._
+
       plan3_2(sqlE"select * from zips where length(city) < 4") must
       beWorkflow(chain[Workflow](
         $read(collection("db", "zips")),
         // FIXME: Inline this $simpleMap with the $match (SD-456)
         $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"), obj(
-          "0" -> Select(ident("x"), "city"),
-          "1" -> Call(ident("NumberLong"), List(Select(Select(ident("x"), "city"), "length"))),
+          "0" -> If(
+            isString(Select(ident("x"), "city")),
+            BinOp(Lt,
+              Call(ident("NumberLong"),
+                List(Select(Select(ident("x"), "city"), "length"))),
+                Literal(Js.Num(4, false))),
+            ident(Js.Undefined.ident)),
           "src" -> ident("x"))))),
           ListMap()),
-        $match(Selector.And(
-          Selector.Doc(BsonField.Name("0") -> Selector.Type(BsonType.Text)),
-          Selector.Doc(BsonField.Name("1") -> Selector.Lt(Bson.Int32(4))))),
+        $match(Selector.Doc(BsonField.Name("0") -> Selector.Eq(Bson.Bool(true)))),
         $project(
           reshape("value" -> $field("src")),
           ExcludeId)))
@@ -760,7 +766,7 @@ class PlannerSpec extends
         $read(collection("db", "zips")),
         // FIXME: Inline this $simpleMap with the $match (SD-456)
         $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"), obj(
-          "__tmp6" ->
+          "0" ->
             If(
               BinOp(And,
                 binop(Or,
@@ -768,7 +774,6 @@ class PlannerSpec extends
                     isAnyNumber(Select(ident("x"), "pop")),
                     isString(Select(ident("x"), "pop"))),
                   isDate(Select(ident("x"), "pop")),
-                  isTimestamp(Select(ident("x"), "pop")),
                   isBoolean(Select(ident("x"), "pop"))),
                 Call(ident("isString"), List(Select(ident("x"), "city")))),
               BinOp(And,
@@ -780,13 +785,13 @@ class PlannerSpec extends
                   Select(ident("x"), "pop"),
                   Literal(Js.Num(20000, false)))),
             ident(Js.Undefined.ident)),
-          "__tmp7" -> ident("x"))))),
+          "src" -> ident("x"))))),
           ListMap()),
         $match(
           Selector.Doc(
-            BsonField.Name("__tmp6") -> Selector.Eq(Bson.Bool(true)))),
+            BsonField.Name("0") -> Selector.Eq(Bson.Bool(true)))),
         $project(
-          reshape("value" -> $field("__tmp7")),
+          reshape("value" -> $field("src")),
           ExcludeId)))
     }
 
