@@ -53,8 +53,8 @@ object ExprOpOps {
   implicit def apply[F[_]](implicit ops: ExprOpOps.Aux[F, F]): ExprOpOps.Uni[F] = ops
 
   implicit def coproduct[F[_], G[_], H[_]](implicit
-      F: ExprOpOps.Aux[F, H],
-      G: ExprOpOps.Aux[G, H])
+    F: ExprOpOps.Aux[F, H],
+    G: ExprOpOps.Aux[G, H])
       : ExprOpOps.Aux[Coproduct[F, G, ?], H] =
     new ExprOpOps[Coproduct[F, G, ?]] {
       type OUT[A] = H[A]

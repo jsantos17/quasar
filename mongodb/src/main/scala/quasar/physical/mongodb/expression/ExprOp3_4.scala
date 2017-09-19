@@ -83,41 +83,36 @@ object ExprOp3_4F {
       }
   }
 
-  implicit def ops[F[_]: Functor](implicit I: ExprOp3_4F :<: F): ExprOpOps.Aux[ExprOp3_4F, F] = new ExprOpOps[ExprOp3_4F] {
+  implicit def ops[F[_]: Functor](implicit I: ExprOp3_4F :<: F, EX: ExprOpCoreF :<: F): ExprOpOps.Uni[F] = new ExprOpOps[F] {
     type OUT[A] = F[A]
 
-    val simplify: AlgebraM[Option, ExprOp3_4F, Fix[F]] = {
-      val fp26  = new ExprOpCoreF.fixpoint[Fix[ExprOpCoreF], ExprOpCoreF](Fix(_))
-      val check = Check[Fix[ExprOpCoreF], ExprOpCoreF]
+    val simplify: AlgebraM[Option, F, Fix[F]] = { node =>
+      val fp26  = new ExprOpCoreF.fixpoint[Fix[F], F](Fix(_))
+      val check = Check[Fix[F], F]
 
-      import fp26.{$cond, $literal}, ExprOpCoreF._
+      import fp26.{$cond, $literal}
 
-      {
-        case $condF(
-          Fix($andF(
-            Fix($lteF(Fix($literalF(Bson.Text(""))), field)),
-            Fix($ltF(_, Fix($literalF(Bson.Doc(_))))))),
-          Fix($condF(
-            Fix($andF(
-              Fix($lteF(Fix($literalF(Bson.Text(""))), _)),
-              Fix($ltF(_, Fix($literalF(Bson.Doc(_))))))),
-            Fix($strLenCPF(_)),
-            Fix($sizeF(_)))),
-          Fix($literalF(Bson.Undefined))) => $cond(check.isString(field), $strLenCP(field), $literal(Bson.Undefined)).some
+      Fix(node) match {
+        case $cond($and($lte($literal(Bson.Text("")), _), $lt(_, $literal(Bson.Doc(_)))),
+          $cond($and($lte($literal(Bson.Text("")), _), $lt(_, $literal(Bson.Doc(_)))),
+            $strLenCP(_),
+            $size(field)),
+          $literal(Bson.Undefined)) => $cond(check.isString(field), Fix($strLenCP(field)), $literal(Bson.Undefined)).some
+        case _ => none
       }
     }
 
-    def bson: Algebra[ExprOp3_4F, Bson] = {
-      case $indexOfBytesF(s, t, b) => Bson.Doc("$indexOfBytes" -> Bson.Arr(List(List(s, t), toList(b)).join))
-      case $indexOfCPF(s, t, b) => Bson.Doc("$indexOfCP" -> Bson.Arr(List(List(s, t), toList(b)).join))
-      case $splitF(s, d) => Bson.Doc("$split" -> Bson.Arr(s, d))
-      case $strLenBytesF(s) => Bson.Doc("$strLenBytes" -> s)
-      case $strLenCPF(s) => Bson.Doc("$strLenCP" -> s)
-      case $substrBytesF(s, i, c) => Bson.Doc("$substrBytes" -> Bson.Arr(s, i, c))
-      case $substrCPF(s, i, c) => Bson.Doc("$substrCP" -> Bson.Arr(s, i, c))
+    def bson: Algebra[F, Bson] = {
+      case $indexOfBytes(s, t, b) => Bson.Doc("$indexOfBytes" -> Bson.Arr(List(List(s, t), toList(b)).join))
+      case $indexOfCP(s, t, b) => Bson.Doc("$indexOfCP" -> Bson.Arr(List(List(s, t), toList(b)).join))
+      case $split(s, d) => Bson.Doc("$split" -> Bson.Arr(s, d))
+      case $strLenBytes(s) => Bson.Doc("$strLenBytes" -> s)
+      case $stringLength(s) => Bson.Doc("$strLenCP" -> s)
+      case $substrBytes(s, i, c) => Bson.Doc("$substrBytes" -> Bson.Arr(s, i, c))
+      case $substrCP(s, i, c) => Bson.Doc("$substrCP" -> Bson.Arr(s, i, c))
     }
 
-    def rebase[T](base: T)(implicit T: Recursive.Aux[T, OUT]) = I(_).some
+    def rebase[T](base: T)(implicit T: Recursive.Aux[T, F]) = _.some
 
     def rewriteRefs0(applyVar: PartialFunction[DocVar, DocVar]) = κ(None)
   }
@@ -142,34 +137,74 @@ object ExprOp3_4F {
 object $indexOfBytes {
   def apply[EX[_], A](string: A, substring: A, bounds: Option[(A, Option[A])])(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$indexOfBytesF(string, substring, bounds))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[(A, A, Option[(A, Option[A])])] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$indexOfBytesF(s, t, b) => (s, t, b)
+    }
 }
 
 object $indexOfCP {
   def apply[EX[_], A](string: A, substring: A, bounds: Option[(A, Option[A])])(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$indexOfCPF(string, substring, bounds))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[(A, A, Option[(A, Option[A])])] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$indexOfCPF(s, t, b) => (s, t, b)
+    }
 }
 
 object $split {
   def apply[EX[_], A](string: A, delimiter: A)(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$splitF(string, delimiter))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[(A, A)] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$splitF(string, delimiter) => (string, delimiter)
+    }
 }
 
 object $strLenBytes {
   def apply[EX[_], A](string: A)(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$strLenBytesF(string))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[A] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$strLenBytesF(string) => string
+    }
+}
+
+object $stringLength {
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[A] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$strLenCPF(str) => str
+    }
 }
 
 object $strLenCP {
   def apply[EX[_], A](string: A)(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$strLenCPF(string))
+
+  def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], I: ExprOp3_4F :<: EX, EX: Functor[EX]): Option[T] =
+    $stringLength.unapply(T.project(expr))
 }
 
 object $substrBytes {
   def apply[EX[_], A](string: A, start: A, index: A)(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$substrBytesF(string, start, index))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[(A, A, A)] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$substrBytesF(string, start, index) => (string, start, index)
+    }
 }
 
 object $substrCP {
   def apply[EX[_], A](string: A, start: A, index: A)(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$substrCPF(string, start, index))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOp3_4F :<: EX): Option[(A, A, A)] =
+    I.prj(expr) collect {
+      case ExprOp3_4F.$substrCPF(string, start, index) => (string, start, index)
+    }
 }

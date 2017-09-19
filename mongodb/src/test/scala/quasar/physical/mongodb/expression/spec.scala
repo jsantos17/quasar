@@ -94,93 +94,93 @@ object ArbitraryExprOp {
 }
 
 class ExpressionSpec extends quasar.Qspec {
-  import fixExprOp._
-  val fp3_0 = new ExprOp3_0F.fixpoint[Fix[ExprOp], ExprOp](_.embed)
-  import fp3_0._
+  // import fixExprOp._
+  // val fp3_0 = new ExprOp3_0F.fixpoint[Fix[ExprOp], ExprOp](_.embed)
+  // import fp3_0._
 
-  val ops = ExprOpOps[ExprOp]
+  // val ops = ExprOpOps[ExprOp]
 
-  "Expression" should {
-    def literal(value: Bson): Bson = $literal(value).cata(ops.bson)
+  // "Expression" should {
+  //   def literal(value: Bson): Bson = $literal(value).cata(ops.bson)
 
-    "escape literal string with $" in {
-      val x = Bson.Text("$1")
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape literal string with $" in {
+  //     val x = Bson.Text("$1")
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "escape literal string with no leading '$'" in {
-      val x = Bson.Text("abc")
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape literal string with no leading '$'" in {
+  //     val x = Bson.Text("abc")
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "escape simple integer literal" in {
-      val x = Bson.Int32(0)
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape simple integer literal" in {
+  //     val x = Bson.Int32(0)
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "escape simple array literal" in {
-      val x = Bson.Arr(Bson.Text("abc") :: Bson.Int32(0) :: Nil)
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape simple array literal" in {
+  //     val x = Bson.Arr(Bson.Text("abc") :: Bson.Int32(0) :: Nil)
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "escape string nested in array" in {
-      val x = Bson.Arr(Bson.Text("$1") :: Nil)
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape string nested in array" in {
+  //     val x = Bson.Arr(Bson.Text("$1") :: Nil)
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "escape simple doc literal" in {
-      val x = Bson.Doc(ListMap("a" -> Bson.Text("b")))
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape simple doc literal" in {
+  //     val x = Bson.Doc(ListMap("a" -> Bson.Text("b")))
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "escape string nested in doc" in {
-      val x = Bson.Doc(ListMap("a" -> Bson.Text("$1")))
-      literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
-    }
+  //   "escape string nested in doc" in {
+  //     val x = Bson.Doc(ListMap("a" -> Bson.Text("$1")))
+  //     literal(x) must_== Bson.Doc(ListMap("$literal" -> x))
+  //   }
 
-    "render $$ROOT" in {
-      DocVar.ROOT().bson must_== Bson.Text("$$ROOT")
-    }
+  //   "render $$ROOT" in {
+  //     DocVar.ROOT().bson must_== Bson.Text("$$ROOT")
+  //   }
 
-    "treat DocField as alias for DocVar.ROOT()" in {
-      DocField(BsonField.Name("foo")) must_== DocVar.ROOT(BsonField.Name("foo"))
-    }
+  //   "treat DocField as alias for DocVar.ROOT()" in {
+  //     DocField(BsonField.Name("foo")) must_== DocVar.ROOT(BsonField.Name("foo"))
+  //   }
 
-    "render $foo under $$ROOT" in {
-      DocVar.ROOT(BsonField.Name("foo")).bson must_== Bson.Text("$foo")
-    }
+  //   "render $foo under $$ROOT" in {
+  //     DocVar.ROOT(BsonField.Name("foo")).bson must_== Bson.Text("$foo")
+  //   }
 
-    "render $foo.bar under $$CURRENT" in {
-      DocVar.CURRENT(BsonField.Name("foo") \ BsonField.Name("bar")).bson must_== Bson.Text("$$CURRENT.foo.bar")
-    }
-  }
+  //   "render $foo.bar under $$CURRENT" in {
+  //     DocVar.CURRENT(BsonField.Name("foo") \ BsonField.Name("bar")).bson must_== Bson.Text("$$CURRENT.foo.bar")
+  //   }
+  // }
 
-  "FormatSpecifier" should {
-    import FormatSpecifier._
+  // "FormatSpecifier" should {
+  //   import FormatSpecifier._
 
-    def toBson(fmt: FormatString): Bson =
-      $dateToString(fmt, $var(DocField(BsonField.Name("date"))))
-        .cata(ops.bson)
+  //   def toBson(fmt: FormatString): Bson =
+  //     $dateToString(fmt, $var(DocField(BsonField.Name("date"))))
+  //       .cata(ops.bson)
 
-    def expected(str: String): Bson =
-      Bson.Doc(ListMap(
-        "$dateToString" -> Bson.Doc(ListMap(
-          "format" -> Bson.Text(str),
-          "date" -> Bson.Text("$date")))))
+  //   def expected(str: String): Bson =
+  //     Bson.Doc(ListMap(
+  //       "$dateToString" -> Bson.Doc(ListMap(
+  //         "format" -> Bson.Text(str),
+  //         "date" -> Bson.Text("$date")))))
 
-    "match first example from mongodb docs" in {
-      toBson(Year :: "-" :: Month :: "-" :: DayOfMonth :: FormatString.empty) must_==
-        expected("%Y-%m-%d")
-    }
+  //   "match first example from mongodb docs" in {
+  //     toBson(Year :: "-" :: Month :: "-" :: DayOfMonth :: FormatString.empty) must_==
+  //       expected("%Y-%m-%d")
+  //   }
 
-    "match second example from mongodb docs" in {
-      toBson(Hour :: ":" :: Minute :: ":" :: Second :: ":" :: Millisecond :: FormatString.empty) must_==
-        expected("%H:%M:%S:%L")
-    }
+  //   "match second example from mongodb docs" in {
+  //     toBson(Hour :: ":" :: Minute :: ":" :: Second :: ":" :: Millisecond :: FormatString.empty) must_==
+  //       expected("%H:%M:%S:%L")
+  //   }
 
-    "escape `%`s" in {
-      toBson(Hour :: "%" :: Minute :: "%" :: Second :: FormatString.empty) must_==
-        expected("%H%%%M%%%S")
-    }
-  }
+  //   "escape `%`s" in {
+  //     toBson(Hour :: "%" :: Minute :: "%" :: Second :: FormatString.empty) must_==
+  //       expected("%H%%%M%%%S")
+  //   }
+  // }
 }

@@ -579,6 +579,11 @@ object $metaF {
 object $sizeF {
   def apply[EX[_], A](array: A)(implicit I: ExprOpCoreF :<: EX): EX[A] =
     I.inj(ExprOpCoreF.$sizeF[A](array))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOpCoreF :<: EX): Option[A] =
+    I.prj(expr) collect {
+      case ExprOpCoreF.$sizeF(value) => value
+    }
 }
 
 object $arrayMapF {
@@ -645,7 +650,7 @@ object $condF {
 
   def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOpCoreF :<: EX): Option[(A, A, A)] =
     I.prj(expr) collect {
-      case ExprOpCoreF.$condF(con, ifTrue, ifFalse) => (con, ifTrue, ifFalse)
+      case ExprOpCoreF.$condF(cond, ifTrue, ifFalse) => (cond, ifTrue, ifFalse)
     }
 }
 object $ifNullF {
@@ -675,6 +680,11 @@ object $or {
     $orF.unapplySeq(T.project(expr))
 }
 
+object $cond {
+  def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], EX: Functor[EX], I: ExprOpCoreF :<: EX): Option[(T, T, T)] =
+    $condF.unapply(T.project(expr))
+}
+
 object $lt {
   def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], EX: Functor[EX], I: ExprOpCoreF :<: EX): Option[(T, T)] =
     $ltF.unapply(T.project(expr))
@@ -692,4 +702,9 @@ object $add {
 object $literal {
   def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], EX: Functor[EX], I: ExprOpCoreF :<: EX): Option[Bson] =
     $literalF.unapply(T.project(expr))
+}
+
+object $size {
+  def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], EX: Functor[EX], I: ExprOpCoreF :<: EX): Option[T] =
+    $sizeF.unapply(T.project(expr))
 }
