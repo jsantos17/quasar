@@ -208,9 +208,16 @@ object MongoDbPlanner {
       case Constant(v1) => ejsonToExpression[M, T[EJson]](v1)
       case Now() => execTime map ($literal(_))
 
-      // FIXME: Will only work for Arrays, not Strings
-      // case Length(a1) => $size(a1).point[M]
       case Length(a1) => unimplemented[M, Fix[ExprOp]]("Length expression")
+      /* NB: Quasar strings are arrays of characters. However, MongoDB
+             represent strings and arrays as distinct types. Moreoever, SQL^2
+             exposes two functions: `array_length` to obtain the length of an array
+             and `length` to obtain the length of a string. This distinction, however,
+             is lost when LP is translated into QScript  */
+
+      /* FIXME: Will only work for Arrays, not Strings. Uncommenting the following line leads
+                to broken plans when the planner attempts to use $size on an array */
+      // case Length(a1) => $size(a1).point[M]
       case Date(a1) => unimplemented[M, Fix[ExprOp]]("Date expression")
       case Time(a1) => unimplemented[M, Fix[ExprOp]]("Time expression")
       case Timestamp(a1) => unimplemented[M, Fix[ExprOp]]("Timestamp expression")
@@ -281,9 +288,9 @@ object MongoDbPlanner {
           }
         exprCheck(typ).fold(cont)(f => $cond(f(expr), cont, fallback)).point[M]
 
-      case Range(_, _)        => unimplemented[M, Fix[ExprOp]]("Range expression")
-      case Search(_, _, _)    => unimplemented[M, Fix[ExprOp]]("Search expression")
-      case Split(_, _)        => unimplemented[M, Fix[ExprOp]]("Split expression")
+      case Range(_, _)     => unimplemented[M, Fix[ExprOp]]("Range expression")
+      case Search(_, _, _) => unimplemented[M, Fix[ExprOp]]("Search expression")
+      case Split(_, _)     => unimplemented[M, Fix[ExprOp]]("Split expression")
     }
 
     val handleSpecialDerived: MapFuncDerived[T, Fix[ExprOp]] => M[Fix[ExprOp]] = {
@@ -614,10 +621,10 @@ object MongoDbPlanner {
     }
 
     val handleSpecialDerived: MapFuncDerived[T, JsCore] => M[JsCore] = {
-      case Abs(a1)       => unimplemented[M, JsCore]("Abs JS")
-      case Ceil(a1)      => unimplemented[M, JsCore]("Ceil JS")
-      case Floor(a1)     => unimplemented[M, JsCore]("Floor JS")
-      case Trunc(a1)     => unimplemented[M, JsCore]("Trunc JS")
+      case Abs(a1)   => unimplemented[M, JsCore]("Abs JS")
+      case Ceil(a1)  => unimplemented[M, JsCore]("Ceil JS")
+      case Floor(a1) => unimplemented[M, JsCore]("Floor JS")
+      case Trunc(a1) => unimplemented[M, JsCore]("Trunc JS")
     }
 
     val handleSpecial: MapFunc[T, JsCore] => M[JsCore] = {

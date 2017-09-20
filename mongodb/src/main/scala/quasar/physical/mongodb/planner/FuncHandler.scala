@@ -20,6 +20,7 @@ import slamdata.Predef._
 import quasar.physical.mongodb.{Bson, BsonCodec}
 import quasar.physical.mongodb.expression._
 import quasar.qscript.{Coalesce => _, MapFuncsDerived => D,  _}, MapFuncsCore._
+import quasar.Type
 
 import matryoshka._
 import matryoshka.data._
@@ -287,9 +288,6 @@ object FuncHandler {
                 import fp26._, fp34._
 
                 mfc.some collect {
-                  case Length(a1) =>
-                    $cond(check.isString(a1),
-                      $strLenCP(a1), $size(a1))
                   case Split(a1, a2) => $split(a1, a2)
                   case Substring(a1, a2, a3) =>
                     $cond($or(
@@ -302,6 +300,10 @@ object FuncHandler {
                         $substrCP(a1, a2, a3)))
                   case ToString(a1) =>
                     mkToString(a1, $substrBytes)
+                  case Guard(a1, Type.FlexArr(_, _, _), a2, a3) =>
+                    $cond(check.isArray(a1), a2.point[Free[EX, ?]], a3)
+                  case Guard(a1, Type.Str, a2, a3) =>
+                    $cond(check.isString(a1), a2.point[Free[EX, ?]], a3)
                 }
               }
             }
