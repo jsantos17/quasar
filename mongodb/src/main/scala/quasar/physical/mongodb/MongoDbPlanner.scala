@@ -244,6 +244,14 @@ object MongoDbPlanner {
       case ProjectIndex(a1, a2)  => unimplemented[M, Fix[ExprOp]]("ProjectIndex expression")
       case DeleteField(a1, a2)  => unimplemented[M, Fix[ExprOp]]("DeleteField expression")
 
+      case Guard(expr, Type.Str, cont @ $strLenCP(_), fallback) =>
+        $cond(check.isString(expr), cont, fallback).point[M]
+      case Guard(expr, Type.Str, $size(_), fallback) =>
+        unimplemented[M, Fix[ExprOp]]("String length expression not implemented for Mongo without $strLenCP")
+      case Guard(expr, Type.FlexArr(_, _, _), $strLenCP(str), fallback) =>
+        $cond(check.isArray(expr), $size(str), fallback).point[M]
+      case Guard(expr, Type.FlexArr(_, _, _), cont @ $size(_), fallback) =>
+        $cond(check.isArray(expr), cont, fallback).point[M]
       // NB: This is maybe a NOP for Fix[ExprOp]s, as they (all?) safely
       //     short-circuit when given the wrong type. However, our guards may be
       //     more restrictive than the operation, in which case we still want to
