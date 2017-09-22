@@ -17,6 +17,7 @@
 package quasar.repl
 
 import slamdata.Predef._
+import quasar.build.BuildInfo
 import quasar.config._
 import quasar.console._
 import quasar.contrib.scalaz._
@@ -62,7 +63,7 @@ object Main {
           })
           .create())
 
-      console.setPrompt(new Prompt("💪 $ "))
+      console.setPrompt(new Prompt(s"(v${BuildInfo.version}) 💪 $$ "))
 
       val i: DriverEff ~> MainTask =
         Failure.toError[MainTask, String]                  :+:

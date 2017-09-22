@@ -47,7 +47,7 @@ import shapeless.{nat, Sized}
 // TODO: Could maybe require only Functor[F], once CoEnv exposes the proper
 //       instances
 class Transform
-  [T[_[_]]: BirecursiveT: EqualT: ShowT,
+  [T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT,
     F[_]: Traverse: Normalizable]
   (implicit
     C:  Coalesce.Aux[T, F, F],

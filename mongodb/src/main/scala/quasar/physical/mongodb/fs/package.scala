@@ -57,6 +57,7 @@ package object fs {
 
   final case class MongoConfig(
     client: MongoClient,
+    serverVersion: ServerVersion,
     defaultDb: Option[fs.DefaultDb],
     wfExec: WorkflowExecutor[MongoDbIO, BsonCursor])
 
@@ -75,9 +76,10 @@ package object fs {
       : DefErrT[Task, MongoConfig] =
     (for {
       client <- asyncClientDef[Task](uri)
+      version <- free.lift(MongoDbIO.serverVersion.run(client)).into[Task].liftM[DefErrT]
       defDb <- free.lift(findDefaultDb.run(client)).into[Task].liftM[DefErrT]
       wfExec <- wfExec(client)
-    } yield MongoConfig(client, defDb, wfExec)).mapT(freeTaskToTask.apply)
+    } yield MongoConfig(client, version, defDb, wfExec)).mapT(freeTaskToTask.apply)
 
   def compile(cfg: MongoConfig): BackendDef.DefErrT[Task, (MongoM ~> Task, Task[Unit])] =
     (effToTask(cfg) map (i => (

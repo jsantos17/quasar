@@ -134,7 +134,6 @@ trait BackendModule {
     type QSR[A] = QScriptRead[T, A]
 
     val R = new Rewrite[T]
-    val O = new Optimize[T]
 
     for {
       qs <- QueryFile.convertToQScriptRead[T, M, QSR](lc)(lp)
@@ -143,7 +142,7 @@ trait BackendModule {
       _ <- logPhase[M](PhaseResult.tree("QScript (ShiftRead)", shifted))
 
       optimized =
-        shifted.transHylo(O.optimize(reflNT[QSM[T, ?]]), Unicoalesce.Capture[T, QS[T]].run)
+        shifted.transHylo(optimize[T], Unicoalesce.Capture[T, QS[T]].run)
 
       _ <- logPhase[M](PhaseResult.tree("QScript (Optimized)", optimized))
     } yield optimized
@@ -181,6 +180,8 @@ trait BackendModule {
   def MonadM: Monad[M]
   def UnirewriteT[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT]: Unirewrite[T, QS[T]]
   def UnicoalesceCap[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT]: Unicoalesce.Capture[T, QS[T]]
+
+  def optimize[T[_[_]]: BirecursiveT: EqualT: ShowT]: QSM[T, T[QSM[T, ?]]] => QSM[T, T[QSM[T, ?]]]
 
   type Config
   def parseConfig(uri: ConnectionUri): DefErrT[Task, Config]

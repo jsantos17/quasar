@@ -1,6 +1,12 @@
 {
     "name": "filter, sort, and limit",
 
+    "backends": {
+        "mongodb_2_6":       "ignoreResultOrder",
+        "mongodb_3_0":       "ignoreResultOrder",
+        "mongodb_read_only": "ignoreResultOrder"
+    },
+
     "data": "zips.data",
 
     "query": "select * from zips where city like \"BOU%\" order by pop limit 10",

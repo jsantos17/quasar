@@ -17,6 +17,7 @@
 package quasar.qscript
 
 import slamdata.Predef._
+import quasar.RenderTreeT
 import quasar.contrib.matryoshka._
 import quasar.contrib.pathy.{ADir, AFile}
 import quasar.contrib.scalaz.bitraverse._
@@ -38,7 +39,7 @@ import scalaz.{:+: => _, Divide => _, _},
   Leibniz._,
   Scalaz._
 
-class Rewrite[T[_[_]]: BirecursiveT: EqualT] extends TTypes[T] {
+class Rewrite[T[_[_]]: BirecursiveT: EqualT: RenderTreeT] extends TTypes[T] {
   def rebuildArray[A](funcs: List[FreeMapA[A]]): FreeMapA[A] = funcs match {
     case Nil    => Free.roll(MFC(EmptyArray[T, FreeMapA[A]]))
     case h :: t =>

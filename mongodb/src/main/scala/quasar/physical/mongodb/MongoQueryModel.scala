@@ -16,25 +16,48 @@
 
 package quasar.physical.mongodb
 
-import scalaz.Scalaz._
+import slamdata.Predef._
 
-sealed abstract class MongoQueryModel
+import scalaz._, Scalaz._, Ordering._
+
+sealed abstract class MongoQueryModel(val s: String)
 
 object MongoQueryModel {
   /** The oldest supported version. */
-  case object `2.6` extends MongoQueryModel
+  case object `2.6` extends MongoQueryModel("2.6")
 
   /** Adds a few operators. */
-  case object `3.0` extends MongoQueryModel
+  case object `3.0` extends MongoQueryModel("3.0")
 
   /** Adds \$lookup and \$distinct, several new operators, and makes
     * accumulation operators available in \$project. */
-  case object `3.2` extends MongoQueryModel
-  case object `3.4` extends MongoQueryModel
+  case object `3.2` extends MongoQueryModel("3.2")
+  case object `3.4` extends MongoQueryModel("3.4")
 
   def apply(version: ServerVersion): MongoQueryModel =
     if (version >= ServerVersion.MongoDb3_4)      MongoQueryModel.`3.4`
     else if (version >= ServerVersion.MongoDb3_2) MongoQueryModel.`3.2`
     else if (version >= ServerVersion.MongoDb3_0) MongoQueryModel.`3.0`
     else                                          MongoQueryModel.`2.6`
+
+  def toBsonVersion(v: MongoQueryModel): BsonVersion =
+    if (v lt `3.4`) BsonVersion.`1.0`
+    else BsonVersion.`1.1`
+
+  implicit val showMongoQueryModel: Show[MongoQueryModel] = new Show[MongoQueryModel] {
+    override def shows(v: MongoQueryModel) = v.s
+  }
+
+  implicit val orderMongoQueryModel: Order[MongoQueryModel] = new Order[MongoQueryModel] {
+    def order(x: MongoQueryModel, y: MongoQueryModel): Ordering = (x, y) match {
+      case (`2.6`, `2.6`) => EQ
+      case (`3.0`, `3.0`) => EQ
+      case (`3.2`, `3.2`) => EQ
+      case (`3.4`, `3.4`) => EQ
+      case (`2.6`, _) => LT
+      case (`3.0`, `3.2` | `3.4`) => LT
+      case (`3.2`, `3.4`) => LT
+      case _ => GT
+    }
+  }
 }

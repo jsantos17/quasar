@@ -1,0 +1,21 @@
+{
+    "name": "order by if undefined",
+    "backends": {
+        "mongodb_2_6":       "ignoreResultOrder",
+        "mongodb_3_0":       "ignoreResultOrder",
+        "mongodb_read_only": "ignoreResultOrder"
+    },
+    "data": "smallZips.data",
+    "query": "select city ?? \"foo\" as name from smallZips order by city ?? \"foo\"",
+    "predicate": "initial",
+    "expected": [{ "name": "ADAMS" },
+                 { "name": "AGAWAM" },
+                 { "name": "ASHFIELD" },
+                 { "name": "ASHLEY FALLS" },
+                 { "name": "BARRE" },
+                 { "name": "BECKET" },
+                 { "name": "BELCHERTOWN" },
+                 { "name": "BLANDFORD" },
+                 { "name": "BRIMFIELD" },
+                 { "name": "BUCKLAND" }]
+}

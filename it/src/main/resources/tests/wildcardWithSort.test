@@ -1,5 +1,10 @@
 {
     "name": "wildcard with sort",
+    "backends": {
+        "mongodb_2_6":       "ignoreResultOrder",
+        "mongodb_3_0":       "ignoreResultOrder",
+        "mongodb_read_only": "ignoreResultOrder"
+    },
     "data": "zips.data",
     "query": "select * from zips order by pop, city limit 10",
     "predicate": "exactly",

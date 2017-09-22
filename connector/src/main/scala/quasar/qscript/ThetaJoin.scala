@@ -96,7 +96,7 @@ object ThetaJoin {
         }
       }
 
-  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: ShowT]
+  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT]
       : Mergeable.Aux[T, ThetaJoin[T, ?]] =
     new Mergeable[ThetaJoin[T, ?]] {
       type IT[F[_]] = T[F]

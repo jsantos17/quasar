@@ -17,7 +17,7 @@ object Dependencies {
   private val monocleVersion      = "1.4.0"
   private val pathyVersion        = "0.2.11"
   private val raptureVersion      = "2.0.0-M9"
-  private val refinedVersion      = "0.8.2"
+  private val refinedVersion      = "0.8.3"
   private val scodecBitsVersion   = "1.1.2"
   private val http4sVersion       = "0.16.0a"
   private val scalacheckVersion   = "1.13.4"
@@ -89,14 +89,10 @@ object Dependencies {
   )
 
   def mongodb = {
-    val nettyVersion = "4.0.43.Final" // This version is set to be the same as Spark
-                                      // to avoid problems in web and it where their classpaths get merged
-                                      // In any case, it should be binary compatible with version 4.0.26 that this
-                                      // mongo release is expecting
+    val nettyVersion = "4.1.14.Final"
+
     Seq(
-      "org.mongodb" % "mongodb-driver-async" %   "3.3.0", // Intentionnally not upgrading to the latest 3.4.1 in order
-                                                          // to make integration easier with Spark as the latest version
-                                                          // depends on netty 4.1.x
+      "org.mongodb" % "mongodb-driver-async" %   "3.5.0",
       // These are optional dependencies of the mongo asynchronous driver.
       // They are needed to connect to mongodb vis SSL which we do under certain configurations
       "io.netty"    % "netty-buffer"         % nettyVersion,

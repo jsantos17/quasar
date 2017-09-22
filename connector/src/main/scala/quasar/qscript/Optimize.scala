@@ -29,7 +29,7 @@ class Optimize[T[_[_]]: BirecursiveT: EqualT: ShowT] extends TTypes[T] {
 
   /** Pull more work to _after_ count operations, limiting the dataset. */
   // TODO: we should be able to pull _most_ of a Reduce repair function to after a Subset
-  private def subsetBeforeMap[F[_], G[_]: Functor]
+  def subsetBeforeMap[F[_], G[_]: Functor]
     (FtoG: F ~> G)
     (implicit QC: QScriptCore :<: F)
       : QScriptCore[T[G]] => Option[QScriptCore[T[G]]] = {
@@ -42,7 +42,7 @@ class Optimize[T[_[_]]: BirecursiveT: EqualT: ShowT] extends TTypes[T] {
     case _ => None
   }
 
-  private def filterBeforeUnion[F[_]: Functor](implicit QC: QScriptCore :<: F)
+  def filterBeforeUnion[F[_]: Functor](implicit QC: QScriptCore :<: F)
       : QScriptCore[T[F]] => Option[QScriptCore[T[F]]] = {
     case Filter(Embed(src), fm) =>
       QC.prj(src) match {

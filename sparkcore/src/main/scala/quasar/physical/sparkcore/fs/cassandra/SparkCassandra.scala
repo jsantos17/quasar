@@ -56,8 +56,6 @@ object SparkCassandra extends SparkCore with ManagedWriteFile[AFile] with Chroot
 
   def rootPrefix(cfg: Config): ADir = cfg.prefix
 
-
-
   val Type = FileSystemType("spark-cassandra")
 
   type Eff7[A] = Coproduct[KeyValueStore[ResultHandle, SparkCursor, ?], Read[SparkContext, ?], A]

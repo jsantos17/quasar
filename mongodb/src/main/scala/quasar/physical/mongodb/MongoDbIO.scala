@@ -33,7 +33,7 @@ import com.mongodb.bulk.BulkWriteResult
 import com.mongodb.client.model._
 import com.mongodb.async._
 import com.mongodb.async.client._
-import org.bson.{BsonBoolean, BsonDocument, Document}
+import org.bson.{BsonBoolean, BsonDocument, BSONException, Document}
 import scalaz.{Failure => _, _}, Scalaz._
 import scalaz.concurrent.Task
 import scalaz.stream._
@@ -51,6 +51,7 @@ final class MongoDbIO[A] private (protected val r: ReaderT[Task, MongoClient, A]
   def attemptMongo: MongoErrT[MongoDbIO, A] =
     EitherT(attempt >>= {
       case -\/(me: MongoException) => unhandledFSError(me).left.point[MongoDbIO]
+      case -\/(be: BSONException)  => unhandledFSError(be).left.point[MongoDbIO]
       case -\/(t)                  => MongoDbIO.fail(t)
       case \/-(a)                  => a.right.point[MongoDbIO]
     })
@@ -80,7 +81,6 @@ object MongoDbIO {
     allowDiskUse: Boolean
   ): Process[MongoDbIO, BsonDocument] =
     aggregateIterable(src, pipeline, allowDiskUse)
-      .map(_.useCursor(new JBoolean(true)))
       .liftM[Process]
       .flatMap(iterableToProcess)
 

@@ -31,7 +31,6 @@ import pathy.Path._
 import scalaz._, Scalaz._
 
 final case class QueryContext[M[_]](
-  model: MongoQueryModel,
   statistics: Collection => Option[CollectionStatistics],
   indexes: Collection => Option[Set[Index]],
   listContents: qscript.DiscoverPath.ListContents[M])
@@ -72,11 +71,9 @@ object QueryContext {
         fa.run.liftM[QueryRT[?[_], BsonCursor, ?]].liftM[PhaseResultT])
 
     val x: FileSystemErrT[MongoDbIO, QueryContext[M]] =
-      (MongoDbIO.serverVersion.liftM[FileSystemErrT] |@|
-       lookup(qs, MongoDbIO.collectionStatistics) |@|
-       lookup(qs, MongoDbIO.indexes))((vers, stats, idxs) =>
+      (lookup(qs, MongoDbIO.collectionStatistics) |@|
+       lookup(qs, MongoDbIO.indexes))((stats, idxs) =>
         QueryContext(
-          MongoQueryModel(vers),
           stats.get(_),
           idxs.get(_),
           lc))

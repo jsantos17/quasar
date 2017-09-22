@@ -26,7 +26,6 @@ import quasar.physical.mongodb.mongoiterable._
 import quasar.physical.mongodb.workflow.$SortF
 import quasar.physical.mongodb.workflowtask._
 
-import java.lang.{Boolean => JBoolean}
 import scala.Predef.classOf
 
 import com.mongodb._
@@ -47,8 +46,7 @@ private[mongodb] final class MongoDbIOWorkflowExecutor
 
   protected def aggregateCursor(src: Collection, pipeline: Pipeline) =
     toCursor(
-      MongoDbIO.aggregateIterable(src, pipeline map (_.bson), true)
-        .map(_.useCursor(new JBoolean(true))))
+      MongoDbIO.aggregateIterable(src, pipeline map (_.bson), true))
 
   protected def count(src: Collection, cfg: Count) = {
     val qry =

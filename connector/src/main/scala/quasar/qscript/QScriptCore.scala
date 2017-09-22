@@ -279,7 +279,7 @@ object QScriptCore {
         }
     }
 
-  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: ShowT]:
+  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT]:
       Mergeable.Aux[T, QScriptCore[T, ?]] =
     new Mergeable[QScriptCore[T, ?]] {
       type IT[F[_]] = T[F]

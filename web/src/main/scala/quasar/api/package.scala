@@ -41,10 +41,6 @@ package object api {
 
   type ApiErrT[F[_], A] = EitherT[F, ApiError, A]
 
-  // Fill in the missing HTTP4s instance
-  implicit val caseInsensitiveStringEqual: Equal[CaseInsensitiveString] =
-    Equal.equalA
-
   /** Interpret a `Failure` effect into `ResponseOr` given evidence the
     * failure type can be converted to a `QResponse`.
     */
@@ -239,20 +235,8 @@ package object api {
   def transcode(from: PathCodec, to: PathCodec): String => String =
     from.parsePath(to.unsafePrintPath, to.unsafePrintPath, to.unsafePrintPath, to.unsafePrintPath)
 
-  def staticFileService(basePath: String): HttpService = {
-    val fsConfig = FileService.Config(systemPath = basePath)
-
-    // This can be changed to simply `fileService(fsConfig)` once we upgrade to
-    // http4s 0.16.0 or higher as this will become the new default behavior in http4s
-    // This is because the behavior prior to 0.16.0 is to serve a `Unauthorized` response
-    // if the path is a directory
-    fileService(fsConfig.copy(
-      pathCollector = (file, config, req) =>
-        // If the path is a directory serve the index.html file if present
-        if (file.isDirectory) Task.delay(StaticFile.fromFile(new jFile(file, "index.html"), Some(req)))
-        // otherwise delegate to the default implementation
-        else fsConfig.pathCollector(file, config, req)))
-  }
+  def staticFileService(basePath: String): HttpService =
+    fileService(FileService.Config(systemPath = basePath))
 
   def redirectService(basePath: String) = HttpService {
     // NB: this means we redirected to a path that wasn't handled, and need

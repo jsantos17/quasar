@@ -24,7 +24,10 @@ import quasar.jscore
 
 import scalaz._, Scalaz._
 
-class BsonSpecs extends quasar.Qspec {
+class BsonSpecs_1_0 extends BsonSpecs(BsonVersion.`1.0`)
+class BsonSpecs_1_1 extends BsonSpecs(BsonVersion.`1.1`)
+
+abstract class BsonSpecs(v: BsonVersion) extends quasar.Qspec {
   import Bson._
 
   "fromRepr" should {
@@ -46,6 +49,7 @@ class BsonSpecs extends quasar.Qspec {
     }
 
     import BsonGen._
+    implicit val arbitraryBson: org.scalacheck.Arbitrary[Bson] = BsonGen.arbBson(v)
 
     "be (fully) isomorphic for representable types" >> prop { (bson: Bson) =>
       val representable = bson match {
@@ -61,7 +65,7 @@ class BsonSpecs extends quasar.Qspec {
         fromRepr(wrapped.repr) must_== wrapped
       else
         fromRepr(wrapped.repr) must_== Doc(ListMap("value" -> Undefined))
-    }.setGen(simpleGen)
+    }.setGen(simpleGen(v))
 
     "be 'semi' isomorphic for all types" >> prop { (bson: Bson) =>
       val wrapped = Doc(ListMap("value" -> bson)).repr
@@ -73,6 +77,7 @@ class BsonSpecs extends quasar.Qspec {
 
   "toJs" should {
     import BsonGen._
+    implicit val arbitraryBson: org.scalacheck.Arbitrary[Bson] = BsonGen.arbBson(v)
 
     "correspond to Data.toJs where toData is defined" >> prop { (bson: Bson) =>
       val data = BsonCodec.toData(bson)
@@ -82,13 +87,16 @@ class BsonSpecs extends quasar.Qspec {
             // NB: encoding int as Data loses size info
             (bson.toJs must_== jscore.Call(jscore.ident("NumberInt"), List(jscore.Literal(Js.Str(x.shows)))).toJs) or
             (bson.toJs must_== jscore.Call(jscore.ident("NumberLong"), List(jscore.Literal(Js.Str(x.shows)))).toJs)
+          case Data.Dec(x) if v === BsonVersion.`1.1` =>
+            (bson.toJs must_== jscore.Call(jscore.ident("NumberDecimal"), List(jscore.Literal(Js.Str(x.shows)))).toJs) or
+            (bson.toJs.some must_== data.toJs.map(_.toJs))
           case _ =>
-            BsonCodec.fromData(data).fold(
+            BsonCodec.fromData(v, data).fold(
               _ => scala.sys.error("failed to convert data to BSON: " + data.shows),
               _.toJs.some must_== data.toJs.map(_.toJs))
         }
       }
-    }.setGen(simpleGen)
+    }.setGen(simpleGen(v))
   }
 }
 
@@ -99,12 +107,12 @@ object BsonGen {
 
   import Bson._
 
-  implicit val arbBson: Arbitrary[Bson] = Arbitrary(Gen.oneOf(
-    simpleGen,
-    resize(5, objGen),
-    resize(5, arrGen)))
+  implicit def arbBson(v: BsonVersion): Arbitrary[Bson] = Arbitrary(Gen.oneOf(
+    simpleGen(v),
+    resize(5, objGen(v)),
+    resize(5, arrGen(v))))
 
-  val simpleGen = oneOf(
+  val simpleGen_1_0: Gen[Bson] = oneOf(
     const(Null),
     const(Bool(true)),
     const(Bool(false)),
@@ -124,12 +132,20 @@ object BsonGen {
     const(MaxKey),
     const(Undefined))
 
-  val objGen = for {
+  def simpleGen(v: BsonVersion): Gen[Bson] = v match {
+    case BsonVersion.`1.0` => simpleGen_1_0
+    case BsonVersion.`1.1` => oneOf(
+      simpleGen_1_0,
+      arbitrary[BigDecimal].filter(_.mc != java.math.MathContext.UNLIMITED).map(Dec128.apply)
+    )
+  }
+
+  def objGen(v: BsonVersion) = for {
     pairs <- listOf(for {
       n <- resize(5, alphaStr)
-      v <- simpleGen
+      v <- simpleGen(v)
     } yield n -> v)
   } yield Doc(pairs.toListMap)
 
-  val arrGen = listOf(simpleGen).map(Arr.apply)
+  def arrGen(v: BsonVersion) = listOf(simpleGen(v)).map(Arr.apply)
 }

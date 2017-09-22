@@ -117,13 +117,15 @@ abstract class MongoDbStdLibSpec extends StdLibSpec {
         check(args, prg).getOrElse(
           (for {
             coll <- MongoDbSpec.tempColl(prefix)
+
+            qm  <- serverVersion.map(MongoQueryModel(_)).run(testClient)
+            bsonVersion = MongoQueryModel.toBsonVersion(qm)
+
             argsBson <- args.zipWithIndex.traverse { case (arg, idx) =>
-              BsonCodec.fromData(arg).point[Task].unattemptRuntime.strengthL("arg" + idx) }
+              BsonCodec.fromData(bsonVersion, arg).point[Task].unattemptRuntime.strengthL("arg" + idx) }
             _     <- insert(
               coll,
               List(Bson.Doc(argsBson.toListMap)).map(_.repr)).run(setupClient)
-
-            qm  <- serverVersion.map(MongoQueryModel(_)).run(testClient)
 
             lp = prg(
               (0 until args.length).toList.map(idx =>

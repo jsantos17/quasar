@@ -77,6 +77,12 @@ trait SparkCore extends BackendModule {
   private final implicit def _QFKeyValueStoreInj: Inject[KeyValueStore[QueryFile.ResultHandle, SparkCursor, ?], Eff] =
     QFKeyValueStoreInj
 
+  def optimize[T[_[_]]: BirecursiveT: EqualT: ShowT]
+      : QSM[T, T[QSM[T, ?]]] => QSM[T, T[QSM[T, ?]]] = {
+    val O = new Optimize[T]
+    O.optimize(fp.reflNT[QSM[T, ?]])
+  }
+
   def detailsOps: SparkConnectorDetails.Ops[Eff] = SparkConnectorDetails.Ops[Eff]
   def readScOps: Read.Ops[SparkContext, Eff] = Read.Ops[SparkContext, Eff]
   def msOps: MonotonicSeq.Ops[Eff] = MonotonicSeq.Ops[Eff]

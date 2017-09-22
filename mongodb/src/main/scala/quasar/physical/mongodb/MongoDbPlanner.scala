@@ -16,7 +16,7 @@
 
 package quasar.physical.mongodb
 
-import slamdata.Predef._
+import slamdata.Predef.{Map => _, _}
 import quasar._, Planner._, Type.{Const => _, Coproduct => _, _}
 import quasar.common.{PhaseResult, PhaseResults, PhaseResultTell, SortDir}
 import quasar.connector.BackendModule
@@ -37,6 +37,7 @@ import quasar.physical.mongodb.expression._
 import quasar.physical.mongodb.planner.{FuncHandler, JsFuncHandler, JoinHandler, JoinSource, OptionFree}
 import quasar.physical.mongodb.workflow.{ExcludeId => _, IncludeId => _, _}
 import quasar.qscript.{Coalesce => _, _}
+import quasar.qscript.{MapFuncsCore => MF}
 import quasar.std.StdLib._ // TODO: remove this
 
 import java.time.Instant
@@ -121,6 +122,7 @@ object MongoDbPlanner {
 
   def getSelector
     [T[_[_]]: BirecursiveT: ShowT, M[_]: Monad: MonadFsErr, EX[_]: Traverse]
+    (v: BsonVersion)
     (fm: FreeMap[T])
     (implicit inj: EX :<: ExprOp)
       : OutputM[PartialSelector[T]] =
@@ -130,7 +132,7 @@ object MongoDbPlanner {
         _.embed),
       ginterpret[(T[MapFunc[T, ?]], ?), MapFunc[T, ?], Hole, OutputM[PartialSelector[T]]](
         κ(defaultSelector[T].point[OutputM]),
-        selector[T]))
+        selector[T](v)))
 
 
   def processMapFunc[T[_[_]]: BirecursiveT: ShowT, M[_]: Monad: MonadFsErr: ExecTimeR, A]
@@ -168,9 +170,9 @@ object MongoDbPlanner {
   val check = new Check[Fix[ExprOp], ExprOp]
 
   def ejsonToExpression[M[_]: Applicative: MonadFsErr, EJ]
-    (ej: EJ)(implicit EJ: Recursive.Aux[EJ, EJson])
+    (v: BsonVersion)(ej: EJ)(implicit EJ: Recursive.Aux[EJ, EJson])
       : M[Fix[ExprOp]] =
-    ej.cataM(BsonCodec.fromEJson).fold(pe => raiseErr(qscriptPlanningFailed(pe)), $literal(_).point[M])
+    ej.cataM(BsonCodec.fromEJson(v)).fold(pe => raiseErr(qscriptPlanningFailed(pe)), $literal(_).point[M])
 
   // TODO: Use `JsonCodec.encode` and avoid failing.
   def ejsonToJs[M[_]: Applicative: MonadFsErr, EJ: Show]
@@ -179,11 +181,6 @@ object MongoDbPlanner {
     ej.cata(Data.fromEJson).toJs.fold(
       raiseErr[M, JsCore](qscriptPlanningFailed(NonRepresentableEJson(ej.shows))))(
       _.point[M])
-
-  def ejsonToExpr[M[_]: Applicative: MonadFsErr, EJ: Show]
-    (ej: EJ)(implicit EJ: Recursive.Aux[EJ, EJson])
-      : M[Expr] =
-    exprOrJs(ej)(ejsonToExpression[M, EJ], ejsonToJs[M, EJ](_) ∘ JsFn.const)
 
   def expression[
     T[_[_]]: RecursiveT: ShowT,
@@ -205,12 +202,9 @@ object MongoDbPlanner {
 
 
     val handleSpecialCore: MapFuncCore[T, Fix[ExprOp]] => M[Fix[ExprOp]] = {
-      case Constant(v1) => ejsonToExpression[M, T[EJson]](v1)
+      case Constant(v1) => unimplemented[M, Fix[ExprOp]]("Constant expression")
       case Now() => execTime map ($literal(_))
 
-      // FIXME: Will only work for Arrays, not Strings
-      // case Length(a1) => $size(a1).point[M]
-      case Length(a1) => unimplemented[M, Fix[ExprOp]]("Length expression")
       case Date(a1) => unimplemented[M, Fix[ExprOp]]("Date expression")
       case Time(a1) => unimplemented[M, Fix[ExprOp]]("Time expression")
       case Timestamp(a1) => unimplemented[M, Fix[ExprOp]]("Timestamp expression")
@@ -236,6 +230,22 @@ object MongoDbPlanner {
       case ProjectField(a1, a2) => unimplemented[M, Fix[ExprOp]](s"ProjectField expression")
       case ProjectIndex(a1, a2)  => unimplemented[M, Fix[ExprOp]]("ProjectIndex expression")
       case DeleteField(a1, a2)  => unimplemented[M, Fix[ExprOp]]("DeleteField expression")
+
+      // NB: Quasar strings are arrays of characters. However, MongoDB
+      //     represent strings and arrays as distinct types. Moreoever, SQL^2
+      //     exposes two functions: `array_length` to obtain the length of an
+      //     array and `length` to obtain the length of a string. This
+      //     distinction, however, is lost when LP is translated into
+      //     QScript. There's only one `Length` MapFunc. The workaround here
+      //     detects calls to array_length or length indirectly through the
+      //     typechecks inserted around calls to `Length` or `ArrayLength` in
+      //     LP typechecks.
+
+      case Length(a1) => unimplemented[M, Fix[ExprOp]]("Length expression")
+      case Guard(expr, Type.Str, cont @ $strLenCP(_), fallback) =>
+        $cond(check.isString(expr), cont, fallback).point[M]
+      case Guard(expr, Type.FlexArr(_, _, _), $strLenCP(str), fallback) =>
+        $cond(check.isArray(expr), $size(str), fallback).point[M]
 
       // NB: This is maybe a NOP for Fix[ExprOp]s, as they (all?) safely
       //     short-circuit when given the wrong type. However, our guards may be
@@ -281,9 +291,9 @@ object MongoDbPlanner {
           }
         exprCheck(typ).fold(cont)(f => $cond(f(expr), cont, fallback)).point[M]
 
-      case Range(_, _)        => unimplemented[M, Fix[ExprOp]]("Range expression")
-      case Search(_, _, _)    => unimplemented[M, Fix[ExprOp]]("Search expression")
-      case Split(_, _)        => unimplemented[M, Fix[ExprOp]]("Split expression")
+      case Range(_, _)     => unimplemented[M, Fix[ExprOp]]("Range expression")
+      case Search(_, _, _) => unimplemented[M, Fix[ExprOp]]("Search expression")
+      case Split(_, _)     => unimplemented[M, Fix[ExprOp]]("Split expression")
     }
 
     val handleSpecialDerived: MapFuncDerived[T, Fix[ExprOp]] => M[Fix[ExprOp]] = {
@@ -614,10 +624,10 @@ object MongoDbPlanner {
     }
 
     val handleSpecialDerived: MapFuncDerived[T, JsCore] => M[JsCore] = {
-      case Abs(a1)       => unimplemented[M, JsCore]("Abs JS")
-      case Ceil(a1)      => unimplemented[M, JsCore]("Ceil JS")
-      case Floor(a1)     => unimplemented[M, JsCore]("Floor JS")
-      case Trunc(a1)     => unimplemented[M, JsCore]("Trunc JS")
+      case Abs(a1)   => unimplemented[M, JsCore]("Abs JS")
+      case Ceil(a1)  => unimplemented[M, JsCore]("Ceil JS")
+      case Floor(a1) => unimplemented[M, JsCore]("Floor JS")
+      case Trunc(a1) => unimplemented[M, JsCore]("Trunc JS")
     }
 
     val handleSpecial: MapFunc[T, JsCore] => M[JsCore] = {
@@ -655,16 +665,16 @@ object MongoDbPlanner {
     * expressions which can be turned into selectors, factoring out the
     * leftovers for conversion using \$where.
     */
-  def selector[T[_[_]]: RecursiveT: ShowT]:
+  def selector[T[_[_]]: RecursiveT: ShowT](v: BsonVersion):
       GAlgebra[(T[MapFunc[T, ?]], ?), MapFunc[T, ?], OutputM[PartialSelector[T]]] = { node =>
     import MapFuncsCore._
 
     type Output = OutputM[PartialSelector[T]]
 
     object IsBson {
-      def unapply(v: (T[MapFunc[T, ?]], Output)): Option[Bson] =
-        v._1.project match {
-          case MFC(Constant(b)) => b.cataM(BsonCodec.fromEJson).toOption
+      def unapply(x: (T[MapFunc[T, ?]], Output)): Option[Bson] =
+        x._1.project match {
+          case MFC(Constant(b)) => b.cataM(BsonCodec.fromEJson(v)).toOption
           case _ => None
         }
     }
@@ -886,7 +896,8 @@ object MongoDbPlanner {
     def plan
       [M[_]: Monad: ExecTimeR: MonadFsErr, WF[_]: Functor: Coalesce: Crush: Crystallize, EX[_]: Traverse]
       (joinHandler: JoinHandler[WF, WBM],
-        funcHandler: MapFunc[IT, ?] ~> OptionFree[EX, ?])
+        funcHandler: MapFunc[IT, ?] ~> OptionFree[EX, ?],
+        v: BsonVersion)
       (implicit
         ev0: WorkflowOpCoreF :<: WF,
         ev1: RenderTree[WorkflowBuilder[WF]],
@@ -906,7 +917,8 @@ object MongoDbPlanner {
         def plan
           [M[_]: Monad: ExecTimeR: MonadFsErr, WF[_]: Functor: Coalesce: Crush: Crystallize, EX[_]: Traverse]
           (joinHandler: JoinHandler[WF, WBM],
-            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?])
+            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?],
+            v: BsonVersion)
           (implicit
             ev0: WorkflowOpCoreF :<: WF,
             ev1: RenderTree[WorkflowBuilder[WF]],
@@ -948,7 +960,8 @@ object MongoDbPlanner {
             WF[_]: Functor: Coalesce: Crush: Crystallize,
             EX[_]: Traverse]
           (joinHandler: JoinHandler[WF, WBM],
-            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?])
+            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?],
+            v: BsonVersion)
           (implicit
             ev0: WorkflowOpCoreF :<: WF,
             ev1: RenderTree[WorkflowBuilder[WF]],
@@ -1009,7 +1022,7 @@ object MongoDbPlanner {
             keys.traverse(handleFreeMap[T, M, EX](funcHandler, _))
               .map(ks => WB.sortBy(src, ks.toList, dirs.toList))
           case Filter(src, cond) =>
-            getSelector[T, M, EX](cond).fold(
+            getSelector[T, M, EX](v)(cond).fold(
               _ => handleFreeMap[T, M, EX](funcHandler, cond).map {
                 // TODO: Postpone decision until we know whether we are going to
                 //       need mapReduce anyway.
@@ -1025,12 +1038,12 @@ object MongoDbPlanner {
                   inputs.traverse(f => handleFreeMap[T, M, EX](funcHandler, f(cond))).map(WB.filter(src, _, sel))
               })
           case Union(src, lBranch, rBranch) =>
-            (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, lBranch, src) ⊛
-              rebaseWB[T, M, WF, EX](joinHandler, funcHandler, rBranch, src))(
+            (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, v, lBranch, src) ⊛
+              rebaseWB[T, M, WF, EX](joinHandler, funcHandler, v, rBranch, src))(
               UnionBuilder(_, _))
           case Subset(src, from, sel, count) =>
-            (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, from, src) ⊛
-              (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, count, src) >>= (HasInt[M, WF](_))))(
+            (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, v, from, src) ⊛
+              (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, v, count, src) >>= (HasInt[M, WF](_))))(
               sel match {
                 case Drop => WB.skip
                 case Take => WB.limit
@@ -1050,15 +1063,16 @@ object MongoDbPlanner {
         def plan
           [M[_]: Monad: ExecTimeR: MonadFsErr, WF[_]: Functor: Coalesce: Crush: Crystallize, EX[_]: Traverse]
           (joinHandler: JoinHandler[WF, WBM],
-            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?])
+            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?],
+            v: BsonVersion)
           (implicit
             ev0: WorkflowOpCoreF :<: WF,
             ev1: RenderTree[WorkflowBuilder[WF]],
             ev2: WorkflowBuilder.Ops[WF],
             ev3: EX :<: ExprOp) =
           qs =>
-        (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, qs.lBranch, qs.src) ⊛
-          rebaseWB[T, M, WF, EX](joinHandler, funcHandler, qs.rBranch, qs.src))(
+        (rebaseWB[T, M, WF, EX](joinHandler, funcHandler, v, qs.lBranch, qs.src) ⊛
+          rebaseWB[T, M, WF, EX](joinHandler, funcHandler, v, qs.rBranch, qs.src))(
           (lb, rb) => {
             val (lKey, rKey) = Unzip[List].unzip(qs.key)
 
@@ -1084,15 +1098,16 @@ object MongoDbPlanner {
         def plan
           [M[_]: Monad: ExecTimeR: MonadFsErr, WF[_]: Functor: Coalesce: Crush: Crystallize, EX[_]: Traverse]
           (joinHandler: JoinHandler[WF, WBM],
-            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?])
+            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?],
+            v: BsonVersion)
           (implicit
             ev0: WorkflowOpCoreF :<: WF,
             ev1: RenderTree[WorkflowBuilder[WF]],
             ev2: WorkflowBuilder.Ops[WF],
             ev3: EX :<: ExprOp) =
           _.run.fold(
-            F.plan[M, WF, EX](joinHandler, funcHandler),
-            G.plan[M, WF, EX](joinHandler, funcHandler))
+            F.plan[M, WF, EX](joinHandler, funcHandler, v),
+            G.plan[M, WF, EX](joinHandler, funcHandler, v))
       }
 
     // TODO: All instances below here only need to exist because of `FreeQS`,
@@ -1105,7 +1120,8 @@ object MongoDbPlanner {
         def plan
           [M[_]: Monad: ExecTimeR: MonadFsErr, WF[_]: Functor: Coalesce: Crush: Crystallize, EX[_]: Traverse]
           (joinHandler: JoinHandler[WF, WBM],
-            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?])
+            funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?],
+            v: BsonVersion)
           (implicit
             ev0: WorkflowOpCoreF :<: WF,
             ev1: RenderTree[WorkflowBuilder[WF]],
@@ -1230,6 +1246,7 @@ object MongoDbPlanner {
     [T[_[_]]: EqualT, M[_]: Monad: ExecTimeR: MonadFsErr, WF[_]: Functor: Coalesce: Crush: Crystallize, EX[_]: Traverse]
     (joinHandler: JoinHandler[WF, WBM],
       funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?],
+      v: BsonVersion,
       free: FreeQS[T],
       src: WorkflowBuilder[WF])
     (implicit
@@ -1240,7 +1257,7 @@ object MongoDbPlanner {
       ev3: EX :<: ExprOp)
       : M[WorkflowBuilder[WF]] =
     free.cataM(
-      interpretM[M, QScriptTotal[T, ?], qscript.Hole, WorkflowBuilder[WF]](κ(src.point[M]), F.plan(joinHandler, funcHandler)))
+      interpretM[M, QScriptTotal[T, ?], qscript.Hole, WorkflowBuilder[WF]](κ(src.point[M]), F.plan(joinHandler, funcHandler, v)))
 
   // TODO: Need `Delay[Show, WorkflowBuilder]`
   @SuppressWarnings(Array("org.wartremover.warts.ToString"))
@@ -1297,6 +1314,32 @@ object MongoDbPlanner {
       case _ => none
     }
   }
+
+  def mapBeforeSort[T[_[_]]: BirecursiveT]: Trans[T] =
+    new Trans[T] {
+      def trans[F[_], G[_]: Functor]
+        (GtoF: PrismNT[G, F])
+        (implicit QC: QScriptCore[T, ?] :<: F) = {
+        case qs @ Map(Embed(src), fm) =>
+          GtoF.get(src) >>= QC.prj match {
+            case Some(Sort(innerSrc, bucket, order)) =>
+              val innerMap =
+                GtoF.reverseGet(QC.inj(Map(
+                  innerSrc,
+                  MapFuncCore.StaticArray(List(fm, HoleF[T]))))).embed
+              QC.inj(Map(
+                GtoF.reverseGet(QC.inj(Sort(innerMap,
+                  bucket.map(_ >> Free.roll[MapFunc[T, ?], Hole](MFC(MF.ProjectIndex(HoleF[T], MF.IntLit(1))))),
+                  order.map {
+                    case (fm, dir) =>
+                      (fm >> Free.roll[MapFunc[T, ?], Hole](MFC(MF.ProjectIndex(HoleF[T], MF.IntLit(1)))), dir)
+                  }))).embed,
+                Free.roll(MFC(MF.ProjectIndex(HoleF[T], MF.IntLit(0))))))
+            case _ => QC.inj(qs)
+          }
+        case x => QC.inj(x)
+      }
+    }
 
   // TODO: Allow backends to provide a “Read” type to the typechecker, which
   //       represents the type of values that can be stored in a collection.
@@ -1375,12 +1418,23 @@ object MongoDbPlanner {
 
   def toMongoQScript[T[_[_]] : BirecursiveT: EqualT: RenderTreeT: ShowT, M[_]: Monad: MonadFsErr: PhaseResultTell](
     qs: T[fs.MongoQScript[T, ?]],
-    listContents: DiscoverPath.ListContents[M]
-  ): M[T[fs.MongoQScript[T, ?]]] =
+    listContents: DiscoverPath.ListContents[M])(
+    implicit branches: Branches.Aux[T, fs.MongoQScript[T, ?]])
+      : M[T[fs.MongoQScript[T, ?]]] = {
+
+    val O = new Optimize[T]
+
     for {
-      mongoQs <- qs.transCataM(liftFGM(assumeReadType[M, T, fs.MongoQScript[T, ?]](Type.AnyObject)))
+      rewrite <- applyTrans(qs)(mapBeforeSort[T]).point[M]
+      optimized <- rewrite
+        .transCata[T[fs.MongoQScript[T, ?]]](
+          liftFF[QScriptCore[T, ?], fs.MongoQScript[T, ?], T[fs.MongoQScript[T, ?]]](
+            repeatedly(O.subsetBeforeMap[fs.MongoQScript[T, ?], fs.MongoQScript[T, ?]](reflNT[fs.MongoQScript[T, ?]]))))
+        .point[M]
+      mongoQs <- optimized.transCataM(liftFGM(assumeReadType[M, T, fs.MongoQScript[T, ?]](Type.AnyObject)))
       _ <- BackendModule.logPhase[M](PhaseResult.tree("QScript (Mongo-specific)", mongoQs))
     } yield mongoQs
+  }
 
   def plan0
     [T[_[_]]: BirecursiveT: EqualT: RenderTreeT: ShowT,
@@ -1389,8 +1443,9 @@ object MongoDbPlanner {
       EX[_]: Traverse]
     (listContents: DiscoverPath.ListContents[M],
       joinHandler: JoinHandler[WF, WBM],
-      funcHandler: MapFunc[T, ?] ~> OptionFree[EX, ?])
-    (qs: T[fs.MongoQScript[T, ?]])
+      funcHandler: BsonVersion => MapFunc[T, ?] ~> OptionFree[EX, ?],
+      v: BsonVersion)
+      (qs: T[fs.MongoQScript[T, ?]])
     (implicit
       ev0: WorkflowOpCoreF :<: WF,
       ev1: WorkflowBuilder.Ops[WF],
@@ -1403,7 +1458,7 @@ object MongoDbPlanner {
       wb  <- log(
         "Workflow Builder",
         opt.cataM[M, WorkflowBuilder[WF]](
-          Planner[T, fs.MongoQScript[T, ?]].plan[M, WF, EX](joinHandler, funcHandler).apply(_) ∘
+          Planner[T, fs.MongoQScript[T, ?]].plan[M, WF, EX](joinHandler, funcHandler(v), v).apply(_) ∘
             (_.transCata[Fix[WorkflowBuilderF[WF, ?]]](repeatedly(WorkflowBuilder.normalize[WF, Fix[WorkflowBuilderF[WF, ?]]])))))
       wf1 <- log("Workflow (raw)", liftM[M, Fix[WF]](WorkflowBuilder.build[WBM, WF](wb)))
       wf2 <- log(
@@ -1414,14 +1469,15 @@ object MongoDbPlanner {
 
   def planExecTime[
     T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT,
-    M[_]: Monad: PhaseResultTell: MonadFsErr]
-    (qs: T[fs.MongoQScript[T, ?]], queryContext: fs.QueryContext[M], execTime: Instant
+    M[_]: Monad: PhaseResultTell: MonadFsErr](
+    qs: T[fs.MongoQScript[T, ?]], queryContext: fs.QueryContext[M],
+    queryModel: MongoQueryModel, execTime: Instant
     ): M[Crystallized[WorkflowF]] = {
 
     val lc: qscript.DiscoverPath.ListContents[ReaderT[M, Instant, ?]] =
       queryContext.listContents.map(f => Kleisli[M, Instant, Set[PathSegment]](_ => f))
     val ctx: fs.QueryContext[ReaderT[M, Instant, ?]] = queryContext.copy(listContents = lc)
-    plan[T, ReaderT[M, Instant, ?]](qs, ctx).run(execTime)
+    plan[T, ReaderT[M, Instant, ?]](qs, ctx, queryModel).run(execTime)
   }
 
   /** Translate the QScript plan to an executable MongoDB "physical"
@@ -1434,32 +1490,34 @@ object MongoDbPlanner {
   def plan[
     T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT,
     M[_]: Monad: PhaseResultTell: MonadFsErr: ExecTimeR]
-    (qs: T[fs.MongoQScript[T, ?]], queryContext: fs.QueryContext[M]
+    (qs: T[fs.MongoQScript[T, ?]], queryContext: fs.QueryContext[M], queryModel: MongoQueryModel
     ): M[Crystallized[WorkflowF]] = {
     import MongoQueryModel._
 
-    queryContext.model match {
+    val bsonVersion = toBsonVersion(queryModel)
+
+    queryModel match {
       case `3.4` =>
         val joinHandler =
           JoinHandler.fallback[Workflow3_2F, WBM](
             JoinHandler.pipeline(queryContext.statistics, queryContext.indexes),
             JoinHandler.mapReduce)
-        plan0[T, M, Workflow3_2F, Expr3_4](queryContext.listContents, joinHandler, FuncHandler.handle3_4[MapFunc[T, ?]])(qs)
+        plan0[T, M, Workflow3_2F, Expr3_4](queryContext.listContents, joinHandler, FuncHandler.handle3_4[MapFunc[T, ?]], bsonVersion)(qs)
 
       case `3.2` =>
         val joinHandler =
           JoinHandler.fallback[Workflow3_2F, WBM](
             JoinHandler.pipeline(queryContext.statistics, queryContext.indexes),
             JoinHandler.mapReduce)
-        plan0[T, M, Workflow3_2F, Expr3_2](queryContext.listContents, joinHandler, FuncHandler.handle3_2[MapFunc[T, ?]])(qs)
+        plan0[T, M, Workflow3_2F, Expr3_2](queryContext.listContents, joinHandler, FuncHandler.handle3_2[MapFunc[T, ?]], bsonVersion)(qs)
 
       case `3.0`     =>
         val joinHandler = JoinHandler.mapReduce[WBM, Workflow2_6F]
-        plan0[T, M, Workflow2_6F, Expr3_0](queryContext.listContents, joinHandler, FuncHandler.handle3_0[MapFunc[T, ?]])(qs).map(_.inject[WorkflowF])
+        plan0[T, M, Workflow2_6F, Expr3_0](queryContext.listContents, joinHandler, FuncHandler.handle3_0[MapFunc[T, ?]], bsonVersion)(qs).map(_.inject[WorkflowF])
 
       case _     =>
         val joinHandler = JoinHandler.mapReduce[WBM, Workflow2_6F]
-        plan0[T, M, Workflow2_6F, Expr2_6](queryContext.listContents, joinHandler, FuncHandler.handle2_6[MapFunc[T, ?]])(qs).map(_.inject[WorkflowF])
+        plan0[T, M, Workflow2_6F, Expr2_6](queryContext.listContents, joinHandler, FuncHandler.handle2_6[MapFunc[T, ?]], bsonVersion)(qs).map(_.inject[WorkflowF])
     }
   }
 }

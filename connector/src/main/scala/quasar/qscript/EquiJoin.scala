@@ -100,7 +100,7 @@ object EquiJoin {
           (EquiJoin(_, fa.lBranch, fa.rBranch, fa.key, fa.f, fa.combine))
     }
 
-  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: ShowT]
+  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT]
       : Mergeable.Aux[T, EquiJoin[T, ?]] =
     new Mergeable[EquiJoin[T, ?]] {
       type IT[F[_]] = T[F]

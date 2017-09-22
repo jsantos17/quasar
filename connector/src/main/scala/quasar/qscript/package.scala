@@ -139,6 +139,8 @@ package object qscript {
   type CoEnvMap[T[_[_]], A]     = CoEnvMapA[T, Hole, A]
   type CoEnvJoin[T[_[_]], A]    = CoEnvMapA[T, JoinSide, A]
 
+  type CoEnvFree[F[_], A] = CoEnv[A, F, Free[F, A]]
+
   object ExtractFunc {
     def unapply[T[_[_]], A](fma: FreeMapA[T, A]): Option[MapFuncCore[T, _]] = fma match {
       case Embed(CoEnv(\/-(MFC(func: MapFuncCore[T, _])))) => Some(func)
@@ -157,7 +159,7 @@ package object qscript {
 
   def EmptyAnn[T[_[_]]]: Ann[T] = Ann[T](Nil, HoleF[T])
 
-  def concat[T[_[_]]: BirecursiveT: EqualT: ShowT, A: Equal: Show]
+  def concat[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT, A: Equal: Show]
     (l: FreeMapA[T, A], r: FreeMapA[T, A])
       : (FreeMapA[T, A], FreeMap[T], FreeMap[T]) = {
 
@@ -204,7 +206,7 @@ package object qscript {
     foundR orElse foundL getOrElse concat0
   }
 
-  def concat3[T[_[_]]: BirecursiveT: EqualT: ShowT, A: Equal: Show](
+  def concat3[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT, A: Equal: Show](
     l: FreeMapA[T, A], c: FreeMapA[T, A], r: FreeMapA[T, A]):
       (FreeMapA[T, A], FreeMap[T], FreeMap[T], FreeMap[T]) = {
 
@@ -213,7 +215,7 @@ package object qscript {
     (lcr, getL >> getLC, getC >> getLC, getR)
   }
 
-  def concat4[T[_[_]]: BirecursiveT: EqualT: ShowT, A: Equal: Show](
+  def concat4[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT, A: Equal: Show](
     l: FreeMapA[T, A], c: FreeMapA[T, A], r: FreeMapA[T, A], r2: FreeMapA[T, A]):
       (FreeMapA[T, A], FreeMap[T], FreeMap[T], FreeMap[T], FreeMap[T]) = {
 
@@ -224,7 +226,7 @@ package object qscript {
 
   def rebase[M[_]: Bind, A](in: M[A], field: M[A]): M[A] = in >> field
 
-  def rebaseBranch[T[_[_]]: BirecursiveT: EqualT: ShowT](
+  def rebaseBranch[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT](
     br: FreeQS[T],
     fm: FreeMap[T]
   ): FreeQS[T] = {
@@ -322,6 +324,59 @@ package object qscript {
         P: PruneArrays[CoEnvQS[T, ?]])
         : FreeQS[T] =
       pruneArrays0[FreeQS[T], CoEnvQS[T, ?]](state).apply(self)
+  }
+
+  def liftAlgebra[T[_[_]]: BirecursiveT, F[_], G[_]: Functor]
+    (alg: QScriptCore[T, T[G]] => F[T[G]], GtoF: PrismNT[G, F])
+    (implicit QC: QScriptCore[T, ?] :<: F)
+      : F[T[G]] => G[T[G]] =
+    ftg => GtoF.reverseGet(
+      liftFG[QScriptCore[T, ?], F, T[G]](alg).apply(ftg))
+
+  // qs.transCata[T[QScriptTotal]](liftId[T, QScriptTotal])
+  def liftId[T[_[_]]: BirecursiveT, F[_]: Functor]
+    (alg: QScriptCore[T, T[F]] => F[T[F]])
+    (implicit QC: QScriptCore[T, ?] :<: F)
+      : F[T[F]] => F[T[F]] =
+    liftAlgebra[T, F, F](alg, idPrism)
+
+  // free.transCata[FreeQS](liftCoEnv[T, QScriptTotal])
+  def liftCoEnv[T[_[_]]: BirecursiveT, F[_]: Functor]
+    (alg: QScriptCore[T, T[CoEnv[Hole, F, ?]]] => F[T[CoEnv[Hole, F, ?]]])
+    (implicit QC: QScriptCore[T, ?] :<: F)
+      : CoEnvFree[F, Hole] => CoEnvFree[F, Hole] = {
+    val bij = coenvBijection[T, F, Hole]
+
+    val partial: F[Free[F, Hole]] => CoEnvFree[F, Hole] = fa => {
+      liftAlgebra[T, F, CoEnv[Hole, F, ?]](alg, coenvPrism[F, Hole])
+        .apply(fa ∘ bij.toK.run) ∘ bij.fromK.run
+    }
+
+    liftCo[T, F, Hole, Free[F, Hole]](partial)
+  }
+
+  trait Trans[T[_[_]]] {
+    def trans[F[_], G[_]: Functor]
+      (GtoF: PrismNT[G, F])
+      (implicit QC: QScriptCore[T, ?] :<: F)
+        : QScriptCore[T, T[G]] => F[T[G]]
+  }
+
+  def applyTrans[T[_[_]]: BirecursiveT, F[_]: Functor]
+    (target: T[F])
+    (transform: Trans[T])
+    (implicit branches: Branches.Aux[T, F], QC: QScriptCore[T, ?] :<: F)
+      : T[F] = {
+
+    val rewriteF: T[F] =
+      target.transCata[T[F]](liftId[T, F](transform.trans[F, F](idPrism[F])))
+
+     branches
+      .run[T[F]](liftCoEnv[T, QScriptTotal[T, ?]](
+        transform.trans[QScriptTotal[T, ?], CoEnv[Hole, QScriptTotal[T, ?], ?]](
+	  coenvPrism[QScriptTotal[T, ?], Hole])))
+      .apply(rewriteF.project)
+      .embed
   }
 }
 

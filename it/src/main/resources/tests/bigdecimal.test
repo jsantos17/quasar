@@ -1,0 +1,20 @@
+{
+    "name": "bigdecimal",
+    "backends": {
+      "couchbase": "pending",
+      "marklogic_json": "pending",
+      "mongodb_2_6": "pending",
+      "mongodb_3_0": "pending",
+      "mongodb_3_2": "pending",
+      "mongodb_read_only": "pending"
+    },
+    "data": "bigdecimal.data",
+    "query": "select nr, val1 from bigdecimal",
+    "predicate": "exactly",
+    "ignoreResultOrder": true,
+    "expected": [
+        { "nr":  1, "val1": 1.23456E789 },
+        { "nr":  2, "val1": 2.2  },
+        { "nr":  3, "val1": 1 }
+    ]
+}

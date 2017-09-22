@@ -3,8 +3,6 @@
     "backends": {
         "mongodb_2_6":       "ignoreResultOrder",
         "mongodb_3_0":       "ignoreResultOrder",
-        "mongodb_3_2":       "ignoreResultOrder",
-        "mongodb_3_4":       "ignoreResultOrder",
         "mongodb_read_only": "ignoreResultOrder"
     },
     "data": "largeZips.data",

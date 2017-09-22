@@ -22,7 +22,7 @@ import quasar.contrib.pathy._
 import quasar.contrib.scalaz._, readerT._
 import quasar.connector.{ChrootedInterpreter, EnvironmentError}
 import quasar.effect._
-import quasar.fp, fp.TaskRef,  fp.free._
+import quasar.fp, fp.TaskRef, fp.free._
 import quasar.fs._,
   mount._,
   FileSystemError._, PathError._, WriteFile._,

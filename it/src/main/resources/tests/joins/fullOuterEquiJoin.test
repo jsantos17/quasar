@@ -5,8 +5,7 @@
         "couchbase": "skip",
         "marklogic_json": "pending",
         "marklogic_xml": "pending",
-        "mimir": "ignoreFieldOrder",
-        "mongodb_2_6": "timeout"
+        "mimir": "ignoreFieldOrder"
     },
 
     "NB": "This passes for mongo locally, but can timeout on travis sporadically.",

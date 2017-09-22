@@ -32,7 +32,6 @@ import scalaz._, Scalaz._
   */
 final class Check[T, EX[_]]
   (implicit
-    TR: Recursive.Aux[T, EX],
     TC: Corecursive.Aux[T, EX],
     EX: Functor[EX],
     I: ExprOpCoreF :<: EX) {

@@ -579,6 +579,11 @@ object $metaF {
 object $sizeF {
   def apply[EX[_], A](array: A)(implicit I: ExprOpCoreF :<: EX): EX[A] =
     I.inj(ExprOpCoreF.$sizeF[A](array))
+
+  def unapply[EX[_], A](expr: EX[A])(implicit I: ExprOpCoreF :<: EX): Option[A] =
+    I.prj(expr) collect {
+      case ExprOpCoreF.$sizeF(str) => str
+    }
 }
 
 object $arrayMapF {
@@ -687,4 +692,12 @@ object $add {
 object $literal {
   def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], EX: Functor[EX], I: ExprOpCoreF :<: EX): Option[Bson] =
     $literalF.unapply(T.project(expr))
+}
+
+object $size {
+  def apply[EX[_], A](arr: A)(implicit I: ExprOpCoreF :<: EX): EX[A] =
+    I.inj(ExprOpCoreF.$sizeF(arr))
+
+  def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], EX: Functor[EX], I: ExprOpCoreF :<: EX): Option[T] =
+    $sizeF.unapply(T.project(expr))
 }

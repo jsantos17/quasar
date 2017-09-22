@@ -106,7 +106,7 @@ object ProjectBucket {
       }
     }
 
-  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT]:
+  implicit def mergeable[T[_[_]]: BirecursiveT: EqualT: RenderTreeT]:
       Mergeable.Aux[T, ProjectBucket[T, ?]] =
     new Mergeable[ProjectBucket[T, ?]] {
       type IT[F[_]] = T[F]

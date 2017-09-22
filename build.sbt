@@ -1,8 +1,8 @@
 import github.GithubPlugin._
 import quasar.project._
 
-import java.lang.{ String, Integer }
-import scala.{Boolean, List, Predef, None, Some, sys, Unit}, Predef.{any2ArrowAssoc, assert, augmentString}
+import java.lang.{Integer, String, Throwable}
+import scala.{Boolean, List, Predef, None, Some, StringContext, sys, Unit}, Predef.{any2ArrowAssoc, assert, augmentString}
 import scala.collection.Seq
 import scala.collection.immutable.Map
 
@@ -73,11 +73,11 @@ val targetSettings = Seq(
 )
 
 lazy val backendRewrittenRunSettings = Seq(
-  run := Def.inputTaskDyn {
-    val log = streams.value.log
+  run := {
+    val delegate = streams.value.log
     val args = complete.DefaultParsers.spaceDelimited("<arg>").parsed
 
-    log.info("Computing classpaths of dependent backends...")
+    delegate.info("Computing classpaths of dependent backends...")
 
     val parentCp = (fullClasspath in connector in Compile).value.files
     val backends = isolatedBackends.value map {
@@ -88,11 +88,26 @@ lazy val backendRewrittenRunSettings = Seq(
         "--backend:" + name + "=" + classpathStr
     }
 
-    // the leading string is significant here!  #sbtwtfbarbecue
-    val argStr = (args ++ backends).mkString(" ", " ", "")
+    val main = (mainClass in Compile).value.getOrElse(sys.error("unspecified main class; huzzah huzzah huzzah"))
+    val r = runner.value
 
-    (run in Compile).toTask(argStr)
-  }.evaluated)
+    val prefix = s"Running ${main}"
+
+    val filtered = new Logger {
+      def log(level: Level.Value, _message: => String): Unit = {
+        lazy val message = _message
+
+        if (level == Level.Info && message.startsWith(prefix))
+          delegate.info(prefix + "...")
+        else
+          delegate.log(level, message)
+      }
+      def success(message: => String): Unit = delegate.success(message)
+      def trace(t: => Throwable): Unit = delegate.trace(t)
+    }
+
+    toError(r.run(main, (fullClasspath in Compile).value.files, args ++ backends, filtered))
+  })
 
 // In Travis, the processor count is reported as 32, but only ~2 cores are
 // actually available to run.

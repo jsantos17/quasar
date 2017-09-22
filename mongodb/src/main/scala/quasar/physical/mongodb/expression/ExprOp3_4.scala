@@ -143,6 +143,11 @@ object $strLenBytes {
 object $strLenCP {
   def apply[EX[_], A](string: A)(implicit I: ExprOp3_4F :<: EX): EX[A] =
     I.inj(ExprOp3_4F.$strLenCPF(string))
+
+  def unapply[T, EX[_]](expr: T)(implicit T: Recursive.Aux[T, EX], I: ExprOp3_4F :<: EX, EX: Functor[EX]): Option[T] =
+    I.prj(T.project(expr)) collect {
+      case ExprOp3_4F.$strLenCPF(str) => str
+    }
 }
 
 object $substrBytes {

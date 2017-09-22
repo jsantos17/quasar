@@ -171,6 +171,12 @@ object Mimir extends BackendModule with Logging {
 
   final case class Config(dataDir: java.io.File)
 
+  def optimize[T[_[_]]: BirecursiveT: EqualT: ShowT]
+      : QSM[T, T[QSM[T, ?]]] => QSM[T, T[QSM[T, ?]]] = {
+    val O = new Optimize[T]
+    O.optimize(reflNT[QSM[T, ?]])
+  }
+
   def parseConfig(uri: ConnectionUri): BackendDef.DefErrT[Task, Config] =
     Config(new java.io.File(uri.value)).point[BackendDef.DefErrT[Task, ?]]
 

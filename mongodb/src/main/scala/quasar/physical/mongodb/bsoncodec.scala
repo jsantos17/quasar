@@ -67,12 +67,16 @@ object BsonCodec {
     }
   }
 
-  val fromCommon: Algebra[ejson.Common, Bson] = {
+  def fromCommon(v: BsonVersion): Algebra[ejson.Common, Bson] = {
     case ejson.Arr(value)  => Bson.Arr(value)
     case ejson.Null()      => Bson.Null
     case ejson.Bool(value) => Bson.Bool(value)
     case ejson.Str(value)  => Bson.Text(value)
-    case ejson.Dec(value)  => Bson.Dec(value.toDouble)
+    case ejson.Dec(value) if v lt BsonVersion.`1.1`
+                           => Bson.Dec(value.toDouble)
+    case ejson.Dec(value) if value.isDecimalDouble
+                           => Bson.Dec(value.toDouble)
+    case ejson.Dec(value)  => Bson.Dec128(value)
   }
 
   def extract[A](fa: Option[Bson], p: Prism[Bson, A]): Option[A] =
@@ -141,8 +145,8 @@ object BsonCodec {
     }
   }
 
-  val fromEJson: AlgebraM[PlannerError \/ ?, EJson, Bson] =
-    _.run.fold(fromExtension, fromCommon(_).right)
+  def fromEJson(v: BsonVersion): AlgebraM[PlannerError \/ ?, EJson, Bson] =
+    _.run.fold(fromExtension, fromCommon(v)(_).right)
 
   /** Converts the parts of `Bson` that it can, then stores the rest in,
     * effectively, `Free.Pure`.
@@ -157,6 +161,7 @@ object BsonCodec {
     case Bson.Text(value)      => C.inj(ejson.Str(value)).right
     case Bson.Dec(value) if (!value.isNaN && !value.isInfinity)
                                => C.inj(ejson.Dec(value)).right
+    case Bson.Dec128(value)    => C.inj(ejson.Dec(value)).right
     case Bson.Int32(value)     => E.inj(ejson.Int(value)).right
     case Bson.Int64(value)     => E.inj(ejson.Int(value)).right
     case Bson.Date(value)      =>
@@ -180,13 +185,13 @@ object BsonCodec {
     case bson                  => bson.left
   }
 
-  def fromData(data: Data): PlannerError \/ Bson =
+  def fromData(v: BsonVersion, data: Data): PlannerError \/ Bson =
     data.hyloM[PlannerError\/ ?, CoEnv[Data, EJson, ?], Bson](
       interpretM({
         case Data.NA => Bson.Undefined.right
         case data    => NonRepresentableData(data).left
       },
-        fromEJson),
+        fromEJson(v)),
       Data.toEJson[EJson].apply(_).right)
 
   def toData(bson: Bson): Data =

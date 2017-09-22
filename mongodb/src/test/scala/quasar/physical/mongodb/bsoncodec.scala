@@ -20,13 +20,15 @@ import slamdata.Predef._
 import quasar._
 
 import scala.collection.immutable.ListMap
-import scalaz._
+import scalaz._, Scalaz._
 
-class BsonCodecSpecs extends quasar.Qspec {
+class BsonCodecSpecs_1_0 extends BsonCodecSpecs(BsonVersion.`1.0`)
+class BsonCodecSpecs_1_1 extends BsonCodecSpecs(BsonVersion.`1.1`)
+
+abstract class BsonCodecSpecs(v: BsonVersion) extends quasar.Qspec {
   import BsonCodec._
 
   import DataArbitrary._
-  import BsonGen._
 
   implicit val ShowData = new Show[Data] {
     override def show(v: Data) = Cord(v.toString)
@@ -37,7 +39,22 @@ class BsonCodecSpecs extends quasar.Qspec {
 
   "fromData" should {
     "fail with bad Id" in {
-      fromData(Data.Id("invalid")) must beLeftDisjunction
+      fromData(v, Data.Id("invalid")) must beLeftDisjunction
+    }
+
+    "of double does convert to Bson.Dec not Bson.Dec128" >> prop { (d: Double) =>
+      fromData(v, Data.Dec(d)) must_== \/-(Bson.Dec(d))
+    }
+
+    val resType =
+      if (v lt BsonVersion.`1.1`) "Bson.Dec" else "Bson.Dec128"
+    s"of bigdecimal that do not fit a double convert to $resType" in {
+      val b = BigDecimal("123456E789")
+      val r = v match {
+        case BsonVersion.`1.0` => Bson.Dec(Double.PositiveInfinity)
+        case BsonVersion.`1.1` => Bson.Dec128(b)
+      }
+      fromData(v, Data.Dec(b)) must_== \/-(r)
     }
 
     "be isomorphic for preserved values" >> prop { (data: Data) =>
@@ -57,15 +74,17 @@ class BsonCodecSpecs extends quasar.Qspec {
       }
 
       preserved(data) ==> {
-        fromData(data).map(toData) must beRightDisjunction(data)
+        fromData(v, data).map(toData) must beRightDisjunction(data)
       }
     }
+
+    implicit val arbitraryBson = BsonGen.arbBson(v)
 
     "be 'semi'-isomorphic for all Bson values" >> prop { (bson: Bson) =>
       // (toData >=> fromData >=> toData) == toData
 
       val data = toData(bson)
-      fromData(data).map(toData _) must beRightDisjunction(data)
+      fromData(v, data).map(toData _) must beRightDisjunction(data)
     }
   }
 
@@ -79,17 +98,17 @@ class BsonCodecSpecs extends quasar.Qspec {
       // Which is to say, every Bson value that results from conversion
       // can be converted to Data and back to Bson, recovering the same
       // Bson value.
-      val v = fromData(data)
-      v.isRight ==> {
-        v.flatMap(bson => fromData(toData(bson))) must_== v
+      val r = fromData(v, data)
+      r.isRight ==> {
+        r.flatMap(bson => fromData(v, toData(bson))) must_== r
       }
     }
   }
 
   "round trip to repr (all Data types)" >> prop { (data: Data) =>
-      val v = fromData(data)
-      v.isRight ==> {
-        val wrapped = v.map(bson => Bson.Doc(ListMap("value" -> bson)))
+      val r = fromData(v, data)
+      r.isRight ==> {
+        val wrapped = r.map(bson => Bson.Doc(ListMap("value" -> bson)))
         wrapped.map(w => Bson.fromRepr(w.repr)) must_== wrapped
       }
   }

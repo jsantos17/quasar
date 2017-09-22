@@ -72,6 +72,12 @@ trait Couchbase extends BackendModule {
   def UnirewriteT[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] = implicitly[Unirewrite[T, QS[T]]]
   def UnicoalesceCap[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] = Unicoalesce.Capture[T, QS[T]]
 
+  def optimize[T[_[_]]: BirecursiveT: EqualT: ShowT]
+      : QSM[T, T[QSM[T, ?]]] => QSM[T, T[QSM[T, ?]]] = {
+    val O = new Optimize[T]
+    O.optimize(reflNT[QSM[T, ?]])
+  }
+
   type Config = common.Config
 
   def parseConfig(uri: ConnectionUri): DefErrT[Task, Config] = fs.parseConfig(uri)
