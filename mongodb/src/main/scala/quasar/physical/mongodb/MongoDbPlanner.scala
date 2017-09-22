@@ -1289,6 +1289,15 @@ object MongoDbPlanner {
     f
   }
 
+  object FreeShiftedRead {
+    def unapply[T[_[_]]](fq: FreeQS[T])(
+      implicit QSR: Const[ShiftedRead[AFile], ?] :<: QScriptTotal[T, ?]
+    ) : Option[ShiftedRead[AFile]] = fq match {
+      case Embed(CoEnv(\/-(QSR(qsr: Const[ShiftedRead[AFile], _])))) => qsr.getConst.some
+      case _ => none
+    }
+  }
+
   // TODO: Allow backends to provide a “Read” type to the typechecker, which
   //       represents the type of values that can be stored in a collection.
   //       E.g., for MongoDB, it would be `Map(String, Top)`. This will help us
@@ -1306,6 +1315,7 @@ object MongoDbPlanner {
         case QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))
            | QC(Sort(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _, _))
            | QC(Sort(Embed(QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))), _ , _))
+           | QC(Subset(_, FreeShiftedRead(ShiftedRead(_, ExcludeId)), _ , _))
            | SR(Const(ShiftedRead(_, ExcludeId))) =>
           ((MapFuncCore.flattenAnd(cond))
             .traverse(_.transCataM(elideMoreGeneralGuards[M, T](typ))))
@@ -1323,6 +1333,7 @@ object MongoDbPlanner {
         case QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))
            | QC(Sort(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _, _))
            | QC(Sort(Embed(QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))), _ , _))
+           | QC(Subset(_, FreeShiftedRead(ShiftedRead(_, ExcludeId)), _ , _))
            | SR(Const(ShiftedRead(_, ExcludeId))) =>
           struct.transCataM(elideMoreGeneralGuards[M, T](typ)) ∘
           (struct => QC.inj(LeftShift(src, struct, id, repair)))
@@ -1333,6 +1344,7 @@ object MongoDbPlanner {
         case QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))
            | QC(Sort(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _, _))
            | QC(Sort(Embed(QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))), _ , _))
+           | QC(Subset(_, FreeShiftedRead(ShiftedRead(_, ExcludeId)), _ , _))
            | SR(Const(ShiftedRead(_, ExcludeId))) =>
           mf.transCataM(elideMoreGeneralGuards[M, T](typ)) ∘
           (mf => QC.inj(qscript.Map(src, mf)))
@@ -1343,6 +1355,7 @@ object MongoDbPlanner {
         case QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))
            | QC(Sort(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _, _))
            | QC(Sort(Embed(QC(Filter(Embed(SR(Const(ShiftedRead(_, ExcludeId)))), _))), _ , _))
+           | QC(Subset(_, FreeShiftedRead(ShiftedRead(_, ExcludeId)), _ , _))
            | SR(Const(ShiftedRead(_, ExcludeId))) =>
           (b.traverse(_.transCataM(elideMoreGeneralGuards[M, T](typ))) ⊛
             red.traverse(_.traverse(_.transCataM(elideMoreGeneralGuards[M, T](typ)))))(
