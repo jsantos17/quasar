@@ -1206,7 +1206,7 @@ class PlannerSpec extends
         beWorkflow(chain[Workflow](
           $read(collection("db", "zips")),
           $sort(NonEmptyList(BsonField.Name("pop") -> SortDir.Ascending))))
-    }.pendingUntilFixed("#2541")
+    }.pendingUntilFixed(notOnPar)
 
     "plan sort with expression in key" in {
       plan(sqlE"select baz from foo order by bar/10") must

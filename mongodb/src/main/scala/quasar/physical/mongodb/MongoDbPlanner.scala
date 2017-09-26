@@ -1422,16 +1422,22 @@ object MongoDbPlanner {
     implicit branches: Branches.Aux[T, fs.MongoQScript[T, ?]])
       : M[T[fs.MongoQScript[T, ?]]] = {
 
+    type MQS[A] = fs.MongoQScript[T, A]
+
     val O = new Optimize[T]
+    val R = new Rewrite[T]
+
+
+    def elideNops: T[MQS] => T[MQS] =
+      liftFG(R.elideNopQC[MQS, MQS](reflNT)).dimap(_.project, _.embed)
 
     for {
       rewrite <- applyTrans(qs)(mapBeforeSort[T]).point[M]
       optimized <- rewrite
-        .transCata[T[fs.MongoQScript[T, ?]]](
-          liftFF[QScriptCore[T, ?], fs.MongoQScript[T, ?], T[fs.MongoQScript[T, ?]]](
-            repeatedly(O.subsetBeforeMap[fs.MongoQScript[T, ?], fs.MongoQScript[T, ?]](reflNT[fs.MongoQScript[T, ?]]))))
-        .point[M]
-      mongoQs <- optimized.transCataM(liftFGM(assumeReadType[M, T, fs.MongoQScript[T, ?]](Type.AnyObject)))
+        .transCata[T[MQS]](liftFF[QScriptCore[T, ?], MQS, T[MQS]](
+          repeatedly(O.subsetBeforeMap[MQS, MQS](reflNT[MQS])))).point[M]
+      mongoQsOpt <- optimized.transCataM(liftFGM(assumeReadType[M, T, MQS](Type.AnyObject)))
+      mongoQs <- elideNops(mongoQsOpt).point[M]
       _ <- BackendModule.logPhase[M](PhaseResult.tree("QScript (Mongo-specific)", mongoQs))
     } yield mongoQs
   }
