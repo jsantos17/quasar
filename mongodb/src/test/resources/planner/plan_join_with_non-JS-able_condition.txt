@@ -1,0 +1,141 @@
+Chain
+├─ $FoldLeftF
+│  ├─ Chain
+│  │  ├─ $ReadF(db; zips)
+│  │  ├─ $SimpleMapF
+│  │  │  ├─ Map
+│  │  │  │  ╰─ Let(__val)
+│  │  │  │     ├─ JsCore([_._id, _])
+│  │  │  │     ╰─ Obj
+│  │  │  │        ├─ Key(0: Array.isArray(
+│  │  │  │        │      (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined) ? true : false)
+│  │  │  │        ╰─ Key(src: __val)
+│  │  │  ╰─ Scope(Map())
+│  │  ├─ $MatchF
+│  │  │  ╰─ Doc
+│  │  │     ╰─ Expr($0 -> Eq(Bool(true)))
+│  │  ├─ $SimpleMapF
+│  │  │  ├─ Map
+│  │  │  │  ╰─ Let(__val)
+│  │  │  │     ├─ JsCore([
+│  │  │  │     │         _.src[0],
+│  │  │  │     │         (isObject(_.src[1]) && (! Array.isArray(_.src[1]))) ? _.src[1] : undefined,
+│  │  │  │     │         Array.isArray(
+│  │  │  │     │           (isObject(_.src[1]) && (! Array.isArray(_.src[1]))) ? _.src[1].loc : undefined) ? true : false])
+│  │  │  │     ╰─ Obj
+│  │  │  │        ├─ Key(s: __val)
+│  │  │  │        ╰─ Key(f: __val[1].loc)
+│  │  │  ├─ SubMap
+│  │  │  │  ├─ JsCore(_.f)
+│  │  │  │  ╰─ Let(m)
+│  │  │  │     ├─ JsCore(_.f)
+│  │  │  │     ╰─ Call
+│  │  │  │        ├─ JsCore(Object.keys(m).map)
+│  │  │  │        ╰─ Fun(Name(k))
+│  │  │  │           ╰─ JsCore([k, m[k]])
+│  │  │  ├─ Flatten
+│  │  │  │  ╰─ JsCore(_.f)
+│  │  │  ├─ Map
+│  │  │  │  ╰─ JsCore([_.s, [_.s, _.f]])
+│  │  │  ╰─ Scope(Map())
+│  │  ├─ $GroupF
+│  │  │  ├─ Grouped
+│  │  │  │  ╰─ Name("0" -> { "$push": "$$ROOT" })
+│  │  │  ╰─ By
+│  │  │     ├─ Name("0" -> {
+│  │  │     │       "$arrayElemAt": [
+│  │  │     │         { "$arrayElemAt": ["$$ROOT", { "$literal": NumberInt("1") }] },
+│  │  │     │         { "$literal": NumberInt("0") }]
+│  │  │     │     })
+│  │  │     ╰─ Name("1" -> {
+│  │  │             "$arrayElemAt": [
+│  │  │               {
+│  │  │                 "$arrayElemAt": [
+│  │  │                   { "$arrayElemAt": ["$$ROOT", { "$literal": NumberInt("1") }] },
+│  │  │                   { "$literal": NumberInt("1") }]
+│  │  │               },
+│  │  │               { "$literal": NumberInt("1") }]
+│  │  │           })
+│  │  ╰─ $ProjectF
+│  │     ├─ Name("_id" -> "$_id")
+│  │     ├─ Name("value")
+│  │     │  ├─ Name("left" -> "$0")
+│  │     │  ├─ Name("right" -> { "$literal": [] })
+│  │     │  ╰─ Name("_id" -> "$_id")
+│  │     ╰─ IncludeId
+│  ╰─ Chain
+│     ├─ $ReadF(db; zips)
+│     ├─ $SimpleMapF
+│     │  ├─ Map
+│     │  │  ╰─ Let(__val)
+│     │  │     ├─ JsCore([_._id, _])
+│     │  │     ╰─ Obj
+│     │  │        ├─ Key(0: Array.isArray(
+│     │  │        │      (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined) ? true : false)
+│     │  │        ╰─ Key(src: __val)
+│     │  ╰─ Scope(Map())
+│     ├─ $MatchF
+│     │  ╰─ Doc
+│     │     ╰─ Expr($0 -> Eq(Bool(true)))
+│     ├─ $SimpleMapF
+│     │  ├─ Map
+│     │  │  ╰─ Let(__val)
+│     │  │     ├─ JsCore([
+│     │  │     │         _.src[0],
+│     │  │     │         (isObject(_.src[1]) && (! Array.isArray(_.src[1]))) ? _.src[1] : undefined,
+│     │  │     │         Array.isArray(
+│     │  │     │           (isObject(_.src[1]) && (! Array.isArray(_.src[1]))) ? _.src[1].loc : undefined) ? true : false])
+│     │  │     ╰─ Obj
+│     │  │        ├─ Key(s: __val)
+│     │  │        ╰─ Key(f: __val[1].loc)
+│     │  ├─ SubMap
+│     │  │  ├─ JsCore(_.f)
+│     │  │  ╰─ Let(m)
+│     │  │     ├─ JsCore(_.f)
+│     │  │     ╰─ Call
+│     │  │        ├─ JsCore(Object.keys(m).map)
+│     │  │        ╰─ Fun(Name(k))
+│     │  │           ╰─ JsCore([k, m[k]])
+│     │  ├─ Flatten
+│     │  │  ╰─ JsCore(_.f)
+│     │  ├─ Map
+│     │  │  ╰─ JsCore([_.s, [_.s, _.f]])
+│     │  ╰─ Scope(Map())
+│     ├─ $MapF
+│     │  ├─ JavaScript(function (key, value) {
+│     │  │               return [
+│     │  │                 { "0": value[1][0], "1": value[1][1][1] },
+│     │  │                 { "left": [], "right": [value] }]
+│     │  │             })
+│     │  ╰─ Scope(Map())
+│     ╰─ $ReduceF
+│        ├─ JavaScript(function (key, values) {
+│        │               var result = { "left": [], "right": [] };
+│        │               values.forEach(
+│        │                 function (value) {
+│        │                   result.left = result.left.concat(value.left);
+│        │                   result.right = result.right.concat(value.right)
+│        │                 });
+│        │               return result
+│        │             })
+│        ╰─ Scope(Map())
+├─ $MatchF
+│  ╰─ Doc
+│     ├─ NotExpr($left -> Size(0))
+│     ╰─ NotExpr($right -> Size(0))
+├─ $UnwindF(DocField(BsonField.Name("right")))
+├─ $UnwindF(DocField(BsonField.Name("left")))
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(city1: (isObject(_.left[0][1]) && (! Array.isArray(_.left[0][1]))) ? _.left[0][1].city : undefined)
+│  │     ├─ Key(loc: (isObject(_.left[0][1]) && (! Array.isArray(_.left[0][1]))) ? _.left[0][1].loc : undefined)
+│  │     ├─ Key(city2: (isObject(_.right[0][1]) && (! Array.isArray(_.right[0][1]))) ? _.right[0][1].city : undefined)
+│  │     ╰─ Key(pop: (isObject(_.right[0][1]) && (! Array.isArray(_.right[0][1]))) ? _.right[0][1].pop : undefined)
+│  ╰─ Scope(Map())
+╰─ $ProjectF
+   ├─ Name("city1" -> true)
+   ├─ Name("loc" -> true)
+   ├─ Name("city2" -> true)
+   ├─ Name("pop" -> true)
+   ╰─ IgnoreId

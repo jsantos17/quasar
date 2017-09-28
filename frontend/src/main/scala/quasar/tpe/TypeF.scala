@@ -18,6 +18,7 @@ package quasar.tpe
 
 import slamdata.Predef._
 import quasar.contrib.matryoshka._
+import quasar.contrib.scalaz.foldable._
 import quasar.ejson
 import quasar.ejson.{CommonEJson => C, ExtEJson => E, EJson, EncodeEJson, EncodeEJsonK}
 import quasar.fp.ski.κ
@@ -340,13 +341,10 @@ private[quasar] sealed abstract class TypeFInstances {
       def apply[A](eql: Equal[A]): Equal[TypeF[J, A]] = {
         implicit val eqlA: Equal[A] = eql
         Equal.equal((x, y) => (x, y) match {
-          case (Unioned(xs), Unioned(ys)) => equalAsSets(xs, ys)
+          case (Unioned(xs), Unioned(ys)) => xs equalsAsSets ys
           case _                          => generic(x) ≟ generic(y)
         })
       }
-
-      def equalAsSets[F[_]: Foldable, A: Equal](xs: F[A], ys: F[A]): Boolean =
-        xs.all(ys element _) && ys.all(xs element _)
 
       def generic[A](tf: TypeF[J, A]) = (
         bottom[J, A].getOption(tf),

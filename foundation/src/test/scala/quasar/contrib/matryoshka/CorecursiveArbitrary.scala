@@ -19,8 +19,9 @@ package quasar.contrib.matryoshka
 import _root_.matryoshka.{Corecursive, Delay}
 import _root_.matryoshka.data._
 import _root_.matryoshka.implicits._
+import _root_.matryoshka.patterns.{CoEnv, EnvT}
 import org.scalacheck.{Arbitrary, Gen}
-import scalaz.Functor
+import scalaz.{Cofree, Free, Functor}
 
 // TODO{matryoshka}: This exists as matryoshka depends on a shapshot version of
 //                   scalacheck at the moment.
@@ -43,6 +44,12 @@ trait CorecursiveArbitrary {
 
   implicit def nuArbitrary[F[_]: Functor](implicit fArb: Delay[Arbitrary, F]): Arbitrary[Nu[F]] =
     corecursiveArbitrary[Nu[F], F]
+
+  implicit def cofreeArbitrary[F[_]: Functor, A](implicit envTArb: Delay[Arbitrary, EnvT[A, F, ?]]): Arbitrary[Cofree[F, A]] =
+    corecursiveArbitrary[Cofree[F, A], EnvT[A, F, ?]]
+
+  implicit def freeArbitrary[F[_]: Functor, A](implicit coEnvArb: Delay[Arbitrary, CoEnv[A, F, ?]]): Arbitrary[Free[F, A]] =
+    corecursiveArbitrary[Free[F, A], CoEnv[A, F, ?]]
 }
 
 object CorecursiveArbitrary extends CorecursiveArbitrary

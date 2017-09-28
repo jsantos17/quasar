@@ -28,7 +28,6 @@ import quasar.fp.numeric._
 import quasar.fs._
 import quasar.fs.mount._
 import quasar.fs.mount.BackendDef.DefinitionResult
-import quasar.fs.mount.cache.VCache
 import quasar.main.metastore._
 import quasar.metastore._
 
@@ -52,6 +51,15 @@ final case class Quasar(interp: CoreEff ~> QErrs_TaskM, shutdown: Task[Unit]) {
 }
 
 object Quasar {
+
+  /** A "terminal" effect, encompassing failures and other effects which
+    * we may want to interpret using more than one implementation.
+    */
+  type QEff[A]  = Coproduct[ConnectionIO, QEff0, A]
+  type QEff0[A] = Coproduct[Task, QEff1, A]
+  type QEff1[A] = Coproduct[Timing, QEff2, A]
+  type QEff2[A] = Coproduct[MetaStoreLocation, QEff3, A]
+  type QEff3[A] = Coproduct[Mounting, QErrs, A]
 
   type QErrsFsAsk[A]  = Coproduct[FsAsk, QErrs, A]
   type QErrsCnxIO[A]  = Coproduct[ConnectionIO, QErrsFsAsk, A]
@@ -139,14 +147,14 @@ object Quasar {
       failedMnts <- attemptMountAll[Mounting](mountsCfg) foldMap ephmralMnt
       _          <- failedMnts.toList.traverse_(logFailedMount).liftM[MainErrT]
 
-      runCore    <- CoreEff.runFs[QEffIO](hfsRef).liftM[MainErrT]
+      runCore    <- CoreEff.runFs[QEff](hfsRef).liftM[MainErrT]
     } yield {
-      val f: QEffIO ~> QErrs_CnxIO_Task_MetaStoreLocM =
-        injectFT[Task, QErrs_CnxIO_Task_MetaStoreLoc]                                 :+:
-        (injectFT[Task, QErrs_CnxIO_Task_MetaStoreLoc] compose Timing.toTask)         :+:
-        (injectFT[ConnectionIO, QErrs_CnxIO_Task_MetaStoreLoc] compose VCache.interp) :+:
-        injectFT[MetaStoreLocation, QErrs_CnxIO_Task_MetaStoreLoc]                    :+:
-        jdbcMounter[QErrs_CnxIO_Task_MetaStoreLoc](hfsRef, mntdRef)                   :+:
+      val f: QEff ~> QErrs_CnxIO_Task_MetaStoreLocM =
+        injectFT[ConnectionIO, QErrs_CnxIO_Task_MetaStoreLoc]                 :+:
+        injectFT[Task, QErrs_CnxIO_Task_MetaStoreLoc]                         :+:
+        (injectFT[Task, QErrs_CnxIO_Task_MetaStoreLoc] compose Timing.toTask) :+:
+        injectFT[MetaStoreLocation, QErrs_CnxIO_Task_MetaStoreLoc]            :+:
+        jdbcMounter[QErrs_CnxIO_Task_MetaStoreLoc](hfsRef, mntdRef)           :+:
         injectFT[QErrs, QErrs_CnxIO_Task_MetaStoreLoc]
 
       val connectionIOToTask: ConnectionIO ~> Task =
@@ -159,7 +167,7 @@ object Quasar {
         Read.constant[QErrs_TaskM, BackendDef[PhysFsEffM]](mounts) :+:
         injectFT[QErrs, QErrs_Task]
 
-      val h: CoreEff ~> QErrs_TaskM =  foldMapNT(g) compose foldMapNT(f) compose runCore
+      val h: CoreEff ~> QErrs_TaskM = foldMapNT(g) compose foldMapNT(f) compose runCore
 
       val mainTaskToTask =
         λ[MainTask ~> Task](_.foldM(e => Task.fail(new RuntimeException(e)), Task.delay(_)))

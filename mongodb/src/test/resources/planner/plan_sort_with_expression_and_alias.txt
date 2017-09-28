@@ -1,0 +1,18 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Arr
+│  │     │  ├─ Obj
+│  │     │  │  ╰─ Key(popInK: ((isNumber(_.pop) || ((_.pop instanceof NumberInt) || (_.pop instanceof NumberLong))) || (_.pop instanceof Date)) ? _.pop / 1000 : undefined)
+│  │     │  ╰─ Ident(_)
+│  │     ╰─ Obj
+│  │        ├─ Key(0: ((isObject(__val[1]) && (! Array.isArray(__val[1]))) && ((isNumber(__val[1].pop) || ((__val[1].pop instanceof NumberInt) || (__val[1].pop instanceof NumberLong))) || (__val[1].pop instanceof Date))) ? __val[1].pop / 1000 : undefined)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $SortF
+│  ╰─ SortKey(0 -> Ascending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

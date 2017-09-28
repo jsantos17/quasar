@@ -31,7 +31,7 @@ object implicits {
     TR: Recursive.Aux[T, EJson]
   ): Order[T] =
     Order.order { (x, y) =>
-      implicit val ordExt = Extension.order
+      implicit val ordExt = Extension.structuralOrder
       OrderR.order[T, EJson](
         x.transCata[T](EJson.elideMetadata[T]),
         y.transCata[T](EJson.elideMetadata[T]))

@@ -1,0 +1,48 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(s: (function (__val) {
+│  │     │      return [
+│  │     │        __val[0],
+│  │     │        __val[1],
+│  │     │        [
+│  │     │          __val[0],
+│  │     │          (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined]]
+│  │     │    })(
+│  │     │      [_._id, _]))
+│  │     ╰─ Key(f: (function (__val) { return Array.isArray(__val[2][1]) ? __val[2][1] : undefined })(
+│  │            (function (__val) {
+│  │              return [
+│  │                __val[0],
+│  │                __val[1],
+│  │                [
+│  │                  __val[0],
+│  │                  (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined]]
+│  │            })(
+│  │              [_._id, _])))
+│  ├─ Flatten
+│  │  ╰─ JsCore(_.f)
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Arr
+│  │     │  ├─ Obj
+│  │     │  │  ├─ Key(zip: (isObject(_.s[1]) && (! Array.isArray(_.s[1]))) ? _.s[1]._id : undefined)
+│  │     │  │  ╰─ Key(loc: _.f)
+│  │     │  ╰─ JsCore(_.f)
+│  │     ╰─ JsCore([__val[0], __val])
+│  ╰─ Scope(Map())
+├─ $ProjectF
+│  ├─ Name("0" -> {
+│  │       "$arrayElemAt": [
+│  │         { "$arrayElemAt": ["$$ROOT", { "$literal": NumberInt("1") }] },
+│  │         { "$literal": NumberInt("1") }]
+│  │     })
+│  ├─ Name("src" -> "$$ROOT")
+│  ╰─ IgnoreId
+├─ $SortF
+│  ╰─ SortKey(0 -> Ascending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

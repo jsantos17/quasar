@@ -759,7 +759,7 @@ object Mimir extends BackendModule with Logging {
     private val map = new ConcurrentHashMap[ResultHandle, Precog#TablePager]
     private val cur = new AtomicLong(0L)
 
-    def executePlan(repr: Repr, out: AFile): Backend[AFile] = {
+    def executePlan(repr: Repr, out: AFile): Backend[Unit] = {
       val path = fileToPath(out)
 
       // TODO it's kind of ugly that we have to page through JValue to get back into NIHDB
@@ -786,7 +786,7 @@ object Mimir extends BackendModule with Logging {
         _ <- Task.gatherUnordered(Seq(populatorWithTermination, ingestor))
       } yield ()
 
-      driver.map(_ => out).liftM[MT].liftB
+      driver.liftM[MT].liftB
     }
 
     def evaluatePlan(repr: Repr): Backend[ResultHandle] = {

@@ -79,7 +79,7 @@ class ExecuteServiceSpec extends quasar.Qspec with FileSystemFixture {
       import QueryFile._
       def apply[A](qa: QueryFile[A]) = qa match {
         case ExecutePlan(lp, _) =>
-          (Vector[PhaseResult](), executionFailed_(lp, msg).left[AFile]).point[F]
+          (Vector[PhaseResult](), executionFailed_(lp, msg).left[Unit]).point[F]
 
         case otherwise =>
           qf(otherwise)

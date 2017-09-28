@@ -454,7 +454,7 @@ class SQLParserSpec extends quasar.Qspec {
     "not parse basic let with '_' as the identifier" in {
       parse("""_ := 5; _""") must
         beLeftDisjunction(
-          GenericParsingError("quotedIdent expected; but found `*** error: '!' expected but _ found'"))
+          GenericParsingError("quotedIdent expected; but found `*** error: `!' expected but _ found'"))
     }
 
     "not parse basic let with digit as the identifier" in {
@@ -466,13 +466,13 @@ class SQLParserSpec extends quasar.Qspec {
     "not parse basic let with digit at the start of the identifier" in {
       parse("""8_ := 5; 8_""") must
         beLeftDisjunction(
-          GenericParsingError("keyword 'except' expected; but found `*** error: '!' expected but _ found'"))
+          GenericParsingError("keyword 'except' expected; but found `*** error: `!' expected but _ found'"))
     }
 
     "not parse basic let with '_' at the start of the identifier" in {
       parse("""_8 := 5; _8""") must
         beLeftDisjunction(
-          GenericParsingError("quotedIdent expected; but found `*** error: '!' expected but _ found'"))
+          GenericParsingError("quotedIdent expected; but found `*** error: `!' expected but _ found'"))
     }
 
     "parse nested lets" in {

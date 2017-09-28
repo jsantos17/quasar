@@ -222,10 +222,8 @@ object Repl {
               expr  <- DF.unattempt_(sql.fixParser.parse(q).leftMap(_.message))
               block <- DF.unattemptT(resolveImports(expr, state.cwd).leftMap(_.message))
               query =  fsQ.executeQuery(block, Variables.fromMap(state.variables), state.cwd, out)
-              _     <- runQuery(state, query)(p =>
-                        P.println(
-                          if (p =/= out) "Source file: " + posixCodec.printPath(p)
-                          else "Wrote file: " + posixCodec.printPath(p)))
+              _     <- runQuery(state, query)(κ(
+                         P.println("Wrote file: " + posixCodec.printPath(out))))
             } yield ()
           },
           for {

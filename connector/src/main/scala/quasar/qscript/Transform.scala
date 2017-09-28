@@ -318,32 +318,29 @@ class Transform
   private def invokeReduction1
       (func: UnaryFunc, values: Func.Input[Target[F], nat._1]): Target[F] = {
     val Ann(provs, reduce) = values(0).ann
-    // NB: If there’s no provenance, then there’s nothing to reduce. We’re
-    //     already holding a single value.
-    provs.tailOption.fold(values(0)) { tail =>
-      prov.genBucketList(tail) match {
-        case Some((newProvs, buckets)) =>
-          Target(Ann(
-            prov.rebase(Free.roll(MFC(ProjectIndex(HoleF[T], IntLit[T, Hole](0)))), newProvs),
-            Free.roll(MFC(ProjectIndex(HoleF[T], IntLit[T, Hole](1))))),
-            QC.inj(Reduce[T, T[F]](
-              values(0).value,
-              buckets,
-              List(ReduceFunc.translateUnaryReduction[FreeMap](func)(reduce)),
-              StaticArray(List(
-                StaticArray(buckets.zipWithIndex.map {
-                  case (_, i) =>  Free.point[MapFunc, ReduceIndex](ReduceIndex(i.left))
-                }),
-                Free.point(ReduceIndex(0.right)))))).embed)
-        case None =>
-          Target(
-            Ann(Nil, HoleF),
-            QC.inj(Reduce[T, T[F]](
-              values(0).value,
-              Nil,
-              List(ReduceFunc.translateUnaryReduction[FreeMap](func)(reduce)),
-              Free.point(ReduceIndex(0.right)))).embed)
-      }
+    val fallThrough =
+      Target(
+        Ann(Nil, HoleF),
+        QC.inj(Reduce[T, T[F]](
+          values(0).value,
+          Nil,
+          List(ReduceFunc.translateUnaryReduction[FreeMap](func)(reduce)),
+          Free.point(ReduceIndex(0.right)))).embed)
+
+    provs.tailOption.flatMap(prov.genBucketList).fold(fallThrough) {
+      case (newProvs, buckets) =>
+        Target(Ann(
+          prov.rebase(Free.roll(MFC(ProjectIndex(HoleF[T], IntLit[T, Hole](0)))), newProvs),
+          Free.roll(MFC(ProjectIndex(HoleF[T], IntLit[T, Hole](1))))),
+          QC.inj(Reduce[T, T[F]](
+            values(0).value,
+            buckets,
+            List(ReduceFunc.translateUnaryReduction[FreeMap](func)(reduce)),
+            StaticArray(List(
+              StaticArray(buckets.zipWithIndex.map {
+                case (_, i) =>  Free.point[MapFunc, ReduceIndex](ReduceIndex(i.left))
+              }),
+              Free.point(ReduceIndex(0.right)))))).embed)
     }
   }
 
@@ -351,8 +348,6 @@ class Transform
       : Target[F] = {
     val join: AutoJoinResult = autojoin(values(0), values(1))
 
-    // NB: If there’s no provenance, then there’s nothing to reduce. We’re
-    //     already holding a single value.
     join.base.buckets.tailOption.fold(Target(EmptyAnn[T], join.base.src)) { tail =>
       prov.genBucketList(tail) match {
         case Some((newProvs, buckets)) =>

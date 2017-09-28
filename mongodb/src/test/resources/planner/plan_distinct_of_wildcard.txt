@@ -1,0 +1,13 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ JsCore(remove(_, "_id"))
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  ╰─ By
+│     ╰─ Name("0" -> "$$ROOT")
+╰─ $ProjectF
+   ├─ Name("value" -> "$_id.0")
+   ╰─ ExcludeId

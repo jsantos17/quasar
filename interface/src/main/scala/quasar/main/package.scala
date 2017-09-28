@@ -194,15 +194,6 @@ package object main extends Logging {
 
   type FsAsk[A] = Read[BackendDef[PhysFsEffM], A]
 
-  /** A "terminal" effect, encompassing failures and other effects which
-    * we may want to interpret using more than one implementation.
-    */
-  type QEffIO[A] = Coproduct[Task, QEff, A]
-  type QEff[A]   = Coproduct[Timing, QEff0, A]
-  type QEff0[A]  = Coproduct[VCache, QEff1, A]
-  type QEff1[A]  = Coproduct[MetaStoreLocation, QEff2, A]
-  type QEff2[A]  = Coproduct[Mounting, QErrs, A]
-
   /** All possible types of failure in the system (apis + physical). */
   type QErrs[A]    = Coproduct[PhysErr, CoreErrs, A]
 
@@ -237,28 +228,40 @@ package object main extends Logging {
       S5: FileSystemFailure :<: S,
       S6: Module.Failure    :<: S,
       S7: MetaStoreLocation :<: S,
-      S8: VCache :<: S,
-      S9: Timing :<: S
+      S8: Timing :<: S,
+      S9: ConnectionIO :<: S
     ): Task[CoreEff ~> Free[S, ?]] = {
       def moduleInter(fs: BackendEffect ~> Free[S,?]): Module ~> Free[S, ?] = {
         val wtv: Coproduct[Mounting, BackendEffect, ?] ~> Free[S,?] = injectFT[Mounting, S] :+: fs
         flatMapSNT(wtv) compose Module.impl.default[Coproduct[Mounting, BackendEffect, ?]]
       }
-      CompositeFileSystem.interpreter[S](hfsRef) map { compFs =>
-        injectFT[MetaStoreLocation, S]                     :+:
-        moduleInter(compFs)                                :+:
-        injectFT[Mounting, S]                              :+:
-        (compFs compose Inject[Analyze, BackendEffect])    :+:
-        (compFs compose Inject[QueryFile, BackendEffect])  :+:
-        (compFs compose Inject[ReadFile, BackendEffect])   :+:
-        (compFs compose Inject[WriteFile, BackendEffect])  :+:
-        (compFs compose Inject[ManageFile, BackendEffect]) :+:
-        injectFT[VCache, S]                                :+:
-        injectFT[Timing, S]                                :+:
-        injectFT[Module.Failure, S]                        :+:
-        injectFT[PathMismatchFailure, S]                   :+:
-        injectFT[MountingFailure, S]                       :+:
-        injectFT[FileSystemFailure, S]
+      CompositeFileSystem.interpreter[S](hfsRef) >>= { compFs =>
+        val vcacheInterp: VCache ~> Free[S, ?] =
+          foldMapNT(
+            (compFs compose Inject[ManageFile, BackendEffect]) :+:
+            injectFT[FileSystemFailure, S]                     :+:
+            injectFT[ConnectionIO, S]
+          ) compose
+            VCache.interp[(ManageFile :\: FileSystemFailure :/: ConnectionIO)#M]
+
+        CompositeFileSystem.overlayModulesViews[Coproduct[VCache, S, ?], S](compFs) ∘ { compFs0 =>
+          val compFs1: BackendEffect ~> Free[S, ?] = foldMapNT(vcacheInterp :+: liftFT[S]) compose compFs0
+
+          injectFT[MetaStoreLocation, S]                      :+:
+          moduleInter(compFs1)                                :+:
+          injectFT[Mounting, S]                               :+:
+          (compFs1 compose Inject[Analyze, BackendEffect])    :+:
+          (compFs1 compose Inject[QueryFile, BackendEffect])  :+:
+          (compFs1 compose Inject[ReadFile, BackendEffect])   :+:
+          (compFs1 compose Inject[WriteFile, BackendEffect])  :+:
+          (compFs1 compose Inject[ManageFile, BackendEffect]) :+:
+          vcacheInterp                                        :+:
+          injectFT[Timing, S]                                 :+:
+          injectFT[Module.Failure, S]                         :+:
+          injectFT[PathMismatchFailure, S]                    :+:
+          injectFT[MountingFailure, S]                        :+:
+          injectFT[FileSystemFailure, S]
+        }
       }
     }
   }
@@ -293,42 +296,57 @@ package object main extends Logging {
       S0: Task :<: S,
       S1: PhysErr :<: S,
       S2: Mounting :<: S,
-      S3: VCache :<: S,
       S4: MountingFailure :<: S,
       S5: PathMismatchFailure :<: S
     ): Task[BackendEffect ~> Free[S, ?]] =
       for {
         startSeq   <- Task.delay(scala.util.Random.nextInt.toLong)
         seqRef     <- TaskRef(startSeq)
-        viewHRef   <- TaskRef[ViewState.ViewHandles](Map())
         mntedRHRef <- TaskRef(Map[ResultHandle, (ADir, ResultHandle)]())
-      } yield {
-        val hierarchicalFs: BackendEffect ~> Free[S, ?] =
-          HierarchicalFsEff.dynamicFileSystem(
-            hfsRef,
-            HierarchicalFsEff.interpreter[S](seqRef, mntedRHRef))
+      } yield
+        HierarchicalFsEff.dynamicFileSystem(
+          hfsRef,
+          HierarchicalFsEff.interpreter[S](seqRef, mntedRHRef))
 
-        type V[A] = (
-              ViewState
+    def overlayModulesViews[S[_], T[_]](
+      f: BackendEffect ~> Free[T, ?]
+    )(implicit
+      S0: T :<: S,
+      S1: Task :<: S,
+      S2: VCache :<: S,
+      S3: Mounting :<: S,
+      S4: MountingFailure :<: S,
+      S5: PathMismatchFailure :<: S
+    ): Task[BackendEffect ~> Free[S, ?]] = {
+      type V[A] = (
+        VCache
+          :\: ViewState
           :\: MonotonicSeq
           :\: Mounting
-          :\: VCache
           :\: MountingFailure
           :\: PathMismatchFailure
           :/: BackendEffect
-        )#M[A]
+      )#M[A]
 
+      for {
+        startSeq   <- Task.delay(scala.util.Random.nextInt.toLong)
+        seqRef     <- TaskRef(startSeq)
+        viewHRef   <- TaskRef[ViewState.ViewHandles](Map())
+      } yield {
         val compFs: V ~> Free[S, ?] =
+          injectFT[VCache, S]                                                 :+:
           injectFT[Task, S].compose(KeyValueStore.impl.fromTaskRef(viewHRef)) :+:
           injectFT[Task, S].compose(MonotonicSeq.fromTaskRef(seqRef))         :+:
           injectFT[Mounting, S]                                               :+:
-          injectFT[VCache, S]                                                 :+:
           injectFT[MountingFailure, S]                                        :+:
           injectFT[PathMismatchFailure, S]                                    :+:
-          hierarchicalFs
+          (foldMapNT(injectFT[T, S]) compose f)
 
-        flatMapSNT(compFs) compose flatMapSNT(transformIn[BackendEffect, V, Free[V, ?]](module.backendEffect[V], liftFT)) compose view.backendEffect[V]
+        flatMapSNT(compFs) compose
+          flatMapSNT(transformIn[BackendEffect, V, Free[V, ?]](module.backendEffect[V], liftFT)) compose
+            view.backendEffect[V]
       }
+    }
   }
 
   /** The effects required by hierarchical FileSystem operations. */

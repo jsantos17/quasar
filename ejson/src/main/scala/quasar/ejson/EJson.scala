@@ -17,6 +17,7 @@
 package quasar.ejson
 
 import slamdata.Predef.{Byte => SByte, Char => SChar, Map => SMap, _}
+import quasar.{RenderTree, NonTerminal, Terminal}, RenderTree.ops._
 import quasar.contrib.matryoshka._
 import quasar.fp._
 
@@ -66,6 +67,25 @@ sealed abstract class CommonInstances extends CommonInstances0 {
         case Dec(v)  => Cord(s"Dec($v)")
       })
     }
+
+  implicit val renderTree: Delay[RenderTree, Common] =
+    new Delay[RenderTree, Common] {
+      def apply[A](rt: RenderTree[A]) = {
+        implicit val rtA = rt
+        RenderTree.make {
+          case Arr(vs) => NonTerminal("Array" :: c, none, vs map (_.render))
+          case Null()  => Terminal("Null" :: c, none)
+          case Bool(b) => t("Bool", b)
+          case Str(v)  => t("Str", v)
+          case Dec(v)  => t("Dec", v)
+        }
+      }
+
+      val c = List("Common")
+
+      def t[A: Show](l: String, a: A) =
+        Terminal(l :: c, some(a.shows))
+    }
 }
 
 sealed abstract class CommonInstances0 {
@@ -114,6 +134,14 @@ sealed abstract class ObjInstances extends ObjInstances0 {
         Show.show(o => (o.value: SMap[String, α]).show)
       }
     }
+
+  implicit val renderTree: Delay[RenderTree, Obj] =
+    new Delay[RenderTree, Obj] {
+      def apply[A](rt: RenderTree[A]) = {
+        implicit val rtA = rt
+        RenderTree.make(obj => NonTerminal(List("Obj"), None, List(obj.value.render)))
+      }
+    }
 }
 
 sealed abstract class ObjInstances0 {
@@ -144,6 +172,38 @@ object Extension extends ExtensionInstances {
 }
 
 sealed abstract class ExtensionInstances {
+  /** Structural ordering, which _does_ consider metadata and thus needs to
+    * be elided before using for proper semantics.
+    */
+  val structuralOrder: Delay[Order, Extension] =
+    new Delay[Order, Extension] {
+      def apply[α](ord: Order[α]) = {
+        implicit val ordA: Order[α] = ord
+        // TODO: Not sure why this isn't found?
+        implicit val ordC: Order[SChar] = scalaz.std.anyVal.char
+        Order.orderBy { e =>
+          val g = generic(e)
+          g.copy(_4 = g._4 map (IMap.fromFoldable(_)))
+        }
+      }
+    }
+
+  /** Structural equality, which _does_ consider metadata and thus needs to
+    * be elided before using for proper semantics.
+    */
+  val structuralEqual: Delay[Equal, Extension] =
+    new Delay[Equal, Extension] {
+      def apply[α](eql: Equal[α]) = {
+        implicit val eqlA: Equal[α] = eql
+        // TODO: Not sure why this isn't found?
+        implicit val eqlC: Equal[SChar] = scalaz.std.anyVal.char
+        Equal.equalBy { e =>
+          val g = generic(e)
+          g.copy(_4 = g._4 map (EqMap.fromFoldable(_)))
+        }
+      }
+    }
+
   implicit val traverse: Traverse[Extension] = new Traverse[Extension] {
     def traverseImpl[G[_], A, B](
       fa: Extension[A])(
@@ -170,24 +230,43 @@ sealed abstract class ExtensionInstances {
       })
     }
 
-  // NB: Private as we don't consider metadata for purposes of EJson equality
-  //     and we need to elide it before using this to compare.
-  //
-  //     This _does_ consider metadata so we can use it in tests of other
-  //     Extension properties.
-  private[ejson] val order: Delay[Order, Extension] =
-    new Delay[Order, Extension] {
-      def apply[α](ord: Order[α]) = {
-        implicit val ordA: Order[α] = ord
-        // TODO: Not sure why this isn't found?
-        implicit val ordC: Order[SChar] = scalaz.std.anyVal.char
-        Order.orderBy(e => (
-          byte.getOption(e)                          ,
-          char.getOption(e)                          ,
-          int.getOption(e)                           ,
-          map.getOption(e) map (IMap fromFoldable _) ,
-          meta.getOption(e)
-        ))
+  implicit val renderTree: Delay[RenderTree, Extension] =
+    new Delay[RenderTree, Extension] {
+      def apply[A](rt: RenderTree[A]) = {
+        implicit val rtA = rt
+        implicit val sc: Show[SChar] = scalaz.std.anyVal.char
+        RenderTree.make {
+          case Meta(v, m) =>
+            NonTerminal("Meta" :: c, none, List(
+              nt("Value", v),
+              nt("Metadata", m)))
+
+          case Map(v)  =>
+            NonTerminal("Map" :: c, none, v map (_.render))
+
+          case Byte(b) => t("Byte", b)
+          case Char(v)  => t("Char", v)
+          case Int(v)  => t("Int", v)
+        }
       }
+
+      val c = List("Extension")
+
+      def nt[A: RenderTree](l: String, a: A) =
+        NonTerminal(l :: c, none, a.render :: Nil)
+
+      def t[A: Show](l: String, a: A) =
+        Terminal(l :: c, some(a.shows))
     }
+
+  ////
+
+  private def generic[A](e: Extension[A]) =
+    (
+      byte.getOption(e),
+      char.getOption(e),
+      int.getOption(e) ,
+      map.getOption(e) ,
+      meta.getOption(e)
+    )
 }

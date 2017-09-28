@@ -191,7 +191,7 @@ object QueryFile {
     * that is unfortunately not expressed in the types currently.
     */
   final case class ExecutePlan(lp: Fix[LogicalPlan], out: AFile)
-    extends QueryFile[(PhaseResults, FileSystemError \/ AFile)]
+    extends QueryFile[(PhaseResults, FileSystemError \/ Unit)]
 
   /** The result of the query is immediately
     * streamed back to the client. This operation begins the streaming, in order
@@ -254,17 +254,13 @@ object QueryFile {
     import transforms._
 
     /** Returns the path to the result of executing the given `LogicalPlan`,
-      * using the provided path if possible.
+      * using the provided path.
       *
       * If the given file path exists, it will be overwritten with the results
       * from the query.
-      *
-      * Execution of certain plans may return a result file other than the
-      * requested file if it is more efficient to do so (i.e. to avoid copying
-      * lots of data for a plan consisting of a single `Read(...)`).
       */
-    def execute(plan: Fix[LogicalPlan], out: AFile): ExecM[AFile] =
-      EitherT(WriterT(lift(ExecutePlan(plan, out))): G[FileSystemError \/ AFile])
+    def execute(plan: Fix[LogicalPlan], out: AFile): ExecM[Unit] =
+      EitherT(WriterT(lift(ExecutePlan(plan, out))): G[FileSystemError \/ Unit])
 
     /** Returns the stream of data resulting from evaluating the given
       * `LogicalPlan`.

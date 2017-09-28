@@ -1,0 +1,21 @@
+Chain
+├─ $ReadF(db; usa_factbook)
+├─ $ProjectF
+│  ├─ Name("0" -> {
+│  │       "$cond": [
+│  │         {
+│  │           "$and": [
+│  │             { "$lte": [{ "$literal": {  } }, "$geo"] },
+│  │             { "$lt": ["$geo", { "$literal": [] }] }]
+│  │         },
+│  │         "$geo",
+│  │         { "$literal": undefined }]
+│  │     })
+│  ╰─ IgnoreId
+├─ $SimpleMapF
+│  ├─ Flatten
+│  │  ╰─ JsCore(_["0"])
+│  ╰─ Scope(Map())
+╰─ $ProjectF
+   ├─ Name("value" -> "$0")
+   ╰─ ExcludeId

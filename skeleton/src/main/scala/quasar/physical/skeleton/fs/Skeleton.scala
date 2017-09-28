@@ -68,7 +68,7 @@ object Skeleton extends BackendModule {
   object QueryFileModule extends QueryFileModule {
     import QueryFile._
 
-    def executePlan(repr: Repr, out: AFile): Backend[AFile] = ???
+    def executePlan(repr: Repr, out: AFile): Backend[Unit] = ???
     def evaluatePlan(repr: Repr): Backend[ResultHandle] = ???
     def more(h: ResultHandle): Backend[Vector[Data]] = ???
     def close(h: ResultHandle): Configured[Unit] = ???

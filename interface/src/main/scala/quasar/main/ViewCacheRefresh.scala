@@ -36,6 +36,7 @@ import java.time.{Duration => JDuration, Instant}
 import scala.concurrent.duration._
 
 import doobie.free.connection.ConnectionIO
+import eu.timepit.refined.auto._
 import pathy.Path._
 import scalaz._, Scalaz._, NonEmptyList.nels
 import scalaz.concurrent.Task
@@ -73,7 +74,7 @@ object ViewCacheRefresh {
       tf  <- lift(M.tempFile(viewPath).run)
       ts1 <- lift(T.timestamp ∘ (_.right[FileSystemError]))
       _   <- lift(assigneeStart(viewPath, assigneeId, ts1, tf) ∘ (_.right[FileSystemError]))
-      _   <- writeViewCache[S](rootDir, tf, vc.viewConfig)
+      _   <- writeViewCache[S](fileParent(viewPath), tf, vc.viewConfig)
       _   <- lift(M.moveFile(tf, vc.dataFile, Overwrite).run)
       ts2 <- lift(T.timestamp ∘ (_.right[FileSystemError]))
       em  <- lift(free.lift(Task.delay(JDuration.between(ts1, ts2).toMillis)).into[S] ∘ (_.right[FileSystemError]))
@@ -100,18 +101,19 @@ object ViewCacheRefresh {
     basePath: ADir, tmpDataPath: AFile, view: MountConfig.ViewConfig
   )(implicit
     Q: QueryFile.Ops[S],
-    S0: WriteFile :<: S,
+    W: WriteFile.Ops[S],
     S1: ManageFile :<: S,
-    S2: Mounting :<: S
-  ): Q.transforms.CompExecM[AFile] = {
+    S2: Mounting :<: S,
+    S3: Task :<: S
+  ): Q.transforms.CompExecM[Unit] = {
     val fsQ = new FilesystemQueries[S]
 
     for {
       q       <- EitherT(EitherT(
                    (quasar.resolveImports_[S](view.query, basePath).leftMap(nels(_)).run.run ∘ (_.sequence))
                      .liftM[PhaseResultT]))
-      r       <- fsQ.executeQuery(q, view.vars, basePath, tmpDataPath)
-    } yield r
+      _       <- fsQ.executeQuery(q, view.vars, basePath, tmpDataPath)
+    } yield ()
   }
 
   def lift[S[_], A](

@@ -48,13 +48,13 @@ final class QueryFileInterpreter(execMongo: WorkflowExecutor[MongoDbIO, BsonCurs
 
   private val execJs = WorkflowExecutor.javaScript
 
-  def execPlan(wf: Crystallized[WorkflowF], out: AFile): MQPhErr[AFile] =
+  def execPlan(wf: Crystallized[WorkflowF], out: AFile): MQPhErr[Unit] =
     (for {
       dst <- EitherT(Collection.fromFile(out)
                 .leftMap(pathErr(_))
                 .point[MongoLogWF[C, ?]])
-      coll <- handlePlan(wf, execJs.execute(_, dst), execWorkflow(_, dst, _))
-    } yield coll.asFile).run.run
+      _   <- handlePlan(wf, execJs.execute(_, dst), execWorkflow(_, dst, _))
+    } yield ()).run.run
 
 
   def evalPlan(wf: Crystallized[WorkflowF], dbName: Option[DatabaseName]): MQPhErr[ResultHandle] =
@@ -177,8 +177,8 @@ final class QueryFileInterpreter(execMongo: WorkflowExecutor[MongoDbIO, BsonCurs
     wf: Crystallized[WorkflowF],
     dst: Collection,
     tmpPrefix: CollectionName
-  ): WorkflowExecErrT[MQ, Collection] =
-    EitherT[MQ, WorkflowExecutionError, Collection](
+  ): WorkflowExecErrT[MQ, Unit] =
+    EitherT[MQ, WorkflowExecutionError, Unit](
       execMongo.execute(wf, dst).run.run(tmpPrefix).eval(0).liftM[QRT])
 
   def evalWorkflow(

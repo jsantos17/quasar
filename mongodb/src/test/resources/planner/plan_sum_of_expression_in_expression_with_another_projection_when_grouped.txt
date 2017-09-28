@@ -1,0 +1,46 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: [_.city])
+│  │     ╰─ Key(content: _)
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  │  ├─ Name("f0" -> { "$first": "$content.city" })
+│  │  ╰─ Name("f1" -> {
+│  │          "$sum": {
+│  │            "$cond": [
+│  │              {
+│  │                "$and": [
+│  │                  { "$lt": [{ "$literal": null }, "$content.pop"] },
+│  │                  { "$lt": ["$content.pop", { "$literal": "" }] }]
+│  │              },
+│  │              { "$subtract": ["$content.pop", { "$literal": NumberInt("1") }] },
+│  │              { "$literal": undefined }]
+│  │          }
+│  │        })
+│  ╰─ By
+│     ╰─ Name("0" -> "$0")
+╰─ $ProjectF
+   ├─ Name("city" -> "$f0")
+   ├─ Name("1" -> {
+   │       "$cond": [
+   │         {
+   │           "$eq": [{ "$literal": NumberInt("1000") }, { "$literal": NumberInt("0") }]
+   │         },
+   │         {
+   │           "$cond": [
+   │             { "$eq": ["$f1", { "$literal": NumberInt("0") }] },
+   │             { "$literal": NaN },
+   │             {
+   │               "$cond": [
+   │                 { "$gt": ["$f1", { "$literal": NumberInt("0") }] },
+   │                 { "$literal": Infinity },
+   │                 { "$literal": -Infinity }]
+   │             }]
+   │         },
+   │         { "$divide": ["$f1", { "$literal": NumberInt("1000") }] }]
+   │     })
+   ╰─ IgnoreId

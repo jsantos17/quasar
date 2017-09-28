@@ -79,8 +79,8 @@ trait SparkCore extends BackendModule {
 
   def optimize[T[_[_]]: BirecursiveT: EqualT: ShowT]
       : QSM[T, T[QSM[T, ?]]] => QSM[T, T[QSM[T, ?]]] = {
-    val O = new Optimize[T]
-    O.optimize(fp.reflNT[QSM[T, ?]])
+      val O = new Optimize[T]
+      O.optimize(fp.reflNT[QSM[T, ?]])
   }
 
   def detailsOps: SparkConnectorDetails.Ops[Eff] = SparkConnectorDetails.Ops[Eff]
@@ -166,8 +166,8 @@ trait SparkCore extends BackendModule {
   object SparkQueryFileModule extends QueryFileModule {
     import QueryFile._
 
-    def executePlan(rdd: RDD[Data], out: AFile): Backend[AFile] = {
-      val execute =  detailsOps.storeData(rdd, out).as(out).liftB
+    def executePlan(rdd: RDD[Data], out: AFile): Backend[Unit] = {
+      val execute =  detailsOps.storeData(rdd, out).liftB
       val log     = Vector(PhaseResult.detail("RDD", rdd.toDebugString))
       execute :++> log
     }

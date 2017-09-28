@@ -161,7 +161,7 @@ object transformPaths {
     val g = λ[QueryFile ~> Free[S, ?]] {
       case ExecutePlan(lp, out) =>
         Q.execute(transformFile(inPath)(lp), inPath(out))
-          .bimap(transformErrorPath(outPath), outPath(_))
+          .leftMap(transformErrorPath(outPath))
           .run.run
 
       case EvaluatePlan(lp) =>

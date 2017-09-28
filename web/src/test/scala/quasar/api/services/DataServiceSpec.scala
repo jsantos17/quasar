@@ -333,6 +333,8 @@ class DataServiceSpec extends quasar.Qspec with FileSystemFixture with Http4s {
             val response = service(fileSystemWithSampleFile(data))(request).unsafePerformSync
             val zipfile = response.as[ByteVector].unsafePerformSync
             val zipMagicByte: ByteVector = hex"504b" // zip file magic byte
+
+            Zip.unzipFiles(response.body).run.unsafePerformSync.map(_.keys) must_=== \/-(Set(currentDir </> file("foo.json")))
             zipfile.take(2) must_=== zipMagicByte
             response.headers.get(`Content-Disposition`.name) must_=== Some(disposition)
             response.contentType must_=== Some(`Content-Type`(MediaType.`application/zip`))
@@ -349,6 +351,8 @@ class DataServiceSpec extends quasar.Qspec with FileSystemFixture with Http4s {
             val response = service(fileSystemWithSampleFile(data))(request).unsafePerformSync
             val zipfile = response.as[ByteVector].unsafePerformSync
             val zipMagicByte: ByteVector = hex"504b" // zip file magic byte
+
+            Zip.unzipFiles(response.body).run.unsafePerformSync.map(_.keys) must_=== \/-(Set(currentDir </> file("foo.csv")))
             zipfile.take(2) must_=== zipMagicByte
             response.headers.get(`Content-Disposition`.name) must_=== Some(disposition)
             response.contentType must_=== Some(`Content-Type`(MediaType.`application/zip`))
@@ -361,6 +365,8 @@ class DataServiceSpec extends quasar.Qspec with FileSystemFixture with Http4s {
             val response = service(fileSystemWithSampleFile(data))(request).unsafePerformSync
             val zipfile = response.as[ByteVector].unsafePerformSync
             val zipMagicByte: ByteVector = hex"504b" // zip file magic byte
+
+            Zip.unzipFiles(response.body).run.unsafePerformSync.map(_.keys) must_=== \/-(Set(currentDir </> file("foo.json")))
             zipfile.take(2) must_=== zipMagicByte
             response.contentType must_=== Some(`Content-Type`(MediaType.`application/zip`))
             response.status must_=== Status.Ok

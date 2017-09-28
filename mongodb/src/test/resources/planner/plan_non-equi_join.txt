@@ -1,0 +1,130 @@
+Chain
+├─ $FoldLeftF
+│  ├─ Chain
+│  │  ├─ $ReadF(db; zips)
+│  │  ├─ $SimpleMapF
+│  │  │  ├─ Map
+│  │  │  │  ╰─ Let(__val)
+│  │  │  │     ├─ JsCore([_._id, _])
+│  │  │  │     ╰─ Obj
+│  │  │  │        ├─ Key(0: __val[1]._id)
+│  │  │  │        ├─ Key(1: true)
+│  │  │  │        ├─ Key(2: __val[1])
+│  │  │  │        ├─ Key(3: true)
+│  │  │  │        ╰─ Key(src: __val)
+│  │  │  ╰─ Scope(Map())
+│  │  ├─ $MatchF
+│  │  │  ╰─ And
+│  │  │     ├─ Or
+│  │  │     │  ├─ Doc
+│  │  │     │  │  ╰─ Expr($0 -> Type(Int32))
+│  │  │     │  ├─ Doc
+│  │  │     │  │  ╰─ Expr($0 -> Type(Int64))
+│  │  │     │  ├─ Doc
+│  │  │     │  │  ╰─ Expr($0 -> Type(Dec))
+│  │  │     │  ├─ Doc
+│  │  │     │  │  ╰─ Expr($0 -> Type(Text))
+│  │  │     │  ├─ Doc
+│  │  │     │  │  ╰─ Expr($0 -> Type(Date))
+│  │  │     │  ╰─ Doc
+│  │  │     │     ╰─ Expr($0 -> Type(Bool))
+│  │  │     ├─ Doc
+│  │  │     │  ╰─ Expr($1 -> Eq(Bool(true)))
+│  │  │     ├─ Doc
+│  │  │     │  ╰─ Expr($2 -> Type(Doc))
+│  │  │     ╰─ Doc
+│  │  │        ╰─ Expr($3 -> Eq(Bool(true)))
+│  │  ├─ $GroupF
+│  │  │  ├─ Grouped
+│  │  │  │  ╰─ Name("0" -> { "$push": "$src" })
+│  │  │  ╰─ By({ "$literal": null })
+│  │  ╰─ $ProjectF
+│  │     ├─ Name("_id" -> "$_id")
+│  │     ├─ Name("value")
+│  │     │  ├─ Name("left" -> "$0")
+│  │     │  ├─ Name("right" -> { "$literal": [] })
+│  │     │  ╰─ Name("_id" -> "$_id")
+│  │     ╰─ IncludeId
+│  ╰─ Chain
+│     ├─ $ReadF(db; zips2)
+│     ├─ $SimpleMapF
+│     │  ├─ Map
+│     │  │  ╰─ Let(__val)
+│     │  │     ├─ JsCore([_._id, _])
+│     │  │     ╰─ Obj
+│     │  │        ├─ Key(0: __val[1]._id)
+│     │  │        ├─ Key(1: true)
+│     │  │        ├─ Key(2: __val[1])
+│     │  │        ├─ Key(3: true)
+│     │  │        ╰─ Key(src: __val)
+│     │  ╰─ Scope(Map())
+│     ├─ $MatchF
+│     │  ╰─ And
+│     │     ├─ Or
+│     │     │  ├─ Doc
+│     │     │  │  ╰─ Expr($0 -> Type(Int32))
+│     │     │  ├─ Doc
+│     │     │  │  ╰─ Expr($0 -> Type(Int64))
+│     │     │  ├─ Doc
+│     │     │  │  ╰─ Expr($0 -> Type(Dec))
+│     │     │  ├─ Doc
+│     │     │  │  ╰─ Expr($0 -> Type(Text))
+│     │     │  ├─ Doc
+│     │     │  │  ╰─ Expr($0 -> Type(Date))
+│     │     │  ╰─ Doc
+│     │     │     ╰─ Expr($0 -> Type(Bool))
+│     │     ├─ Doc
+│     │     │  ╰─ Expr($1 -> Eq(Bool(true)))
+│     │     ├─ Doc
+│     │     │  ╰─ Expr($2 -> Type(Doc))
+│     │     ╰─ Doc
+│     │        ╰─ Expr($3 -> Eq(Bool(true)))
+│     ├─ $MapF
+│     │  ├─ JavaScript(function (key, value) { return [null, { "left": [], "right": [value.src] }] })
+│     │  ╰─ Scope(Map())
+│     ╰─ $ReduceF
+│        ├─ JavaScript(function (key, values) {
+│        │               var result = { "left": [], "right": [] };
+│        │               values.forEach(
+│        │                 function (value) {
+│        │                   result.left = result.left.concat(value.left);
+│        │                   result.right = result.right.concat(value.right)
+│        │                 });
+│        │               return result
+│        │             })
+│        ╰─ Scope(Map())
+├─ $MatchF
+│  ╰─ Doc
+│     ├─ NotExpr($left -> Size(0))
+│     ╰─ NotExpr($right -> Size(0))
+├─ $UnwindF(DocField(BsonField.Name("right")))
+├─ $UnwindF(DocField(BsonField.Name("left")))
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ JsCore([
+│  │     │         [
+│  │     │           _.left[0],
+│  │     │           [_.left[0]],
+│  │     │           _.left[1],
+│  │     │           ((((isNumber(_.left[1]._id) || ((_.left[1]._id instanceof NumberInt) || (_.left[1]._id instanceof NumberLong))) || isString(_.left[1]._id)) || ((_.left[1]._id instanceof Date) || ((typeof _.left[1]._id) === "boolean"))) ? true : false) && ((isObject(_.left[1]) && (! Array.isArray(_.left[1]))) ? true : false)],
+│  │     │         [
+│  │     │           _.right[0],
+│  │     │           [_.right[0]],
+│  │     │           _.right[1],
+│  │     │           ((((isNumber(_.right[1]._id) || ((_.right[1]._id instanceof NumberInt) || (_.right[1]._id instanceof NumberLong))) || isString(_.right[1]._id)) || ((_.right[1]._id instanceof Date) || ((typeof _.right[1]._id) === "boolean"))) ? true : false) && ((isObject(_.right[1]) && (! Array.isArray(_.right[1]))) ? true : false)]])
+│  │     ╰─ Obj
+│  │        ├─ Key(0: true)
+│  │        ├─ Key(1: __val[0][2]._id < __val[1][2]._id)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $MatchF
+│  ╰─ And
+│     ├─ Doc
+│     │  ╰─ Expr($0 -> Eq(Bool(true)))
+│     ╰─ Doc
+│        ╰─ Expr($1 -> Eq(Bool(true)))
+╰─ $SimpleMapF
+   ├─ Map
+   │  ╰─ JsCore((isObject(_.src[1][2]) && (! Array.isArray(_.src[1][2]))) ? _.src[1][2].city : undefined)
+   ╰─ Scope(Map())

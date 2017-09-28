@@ -1,0 +1,16 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ JsCore([remove(_, "__sd__0"), _])
+│  │     ╰─ Obj
+│  │        ├─ Key(0: ((isNumber(
+│  │        │      (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) || ((((isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) instanceof NumberInt) || (((isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) instanceof NumberLong))) && (isObject(__val[1]) && (! Array.isArray(__val[1])))) ? __val[1].pop * 10 : undefined)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $SortF
+│  ╰─ SortKey(0 -> Descending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

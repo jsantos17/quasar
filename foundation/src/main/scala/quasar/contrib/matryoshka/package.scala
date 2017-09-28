@@ -20,7 +20,9 @@ import slamdata.Predef._
 
 import _root_.monocle.{Getter, Iso}
 import _root_.matryoshka._
-import _root_.matryoshka.patterns.EnvT
+import _root_.matryoshka.data.free._
+import _root_.matryoshka.implicits._
+import _root_.matryoshka.patterns._
 import _root_.scalaz._, Scalaz._
 
 package object matryoshka {
@@ -33,11 +35,27 @@ package object matryoshka {
       first)(
       (prev, next) => x => prev(x).fold(next(x))(orOriginal(next)(_).some))
 
+  object convertToFree {
+    def apply[F[_], A] = new PartiallyApplied[F, A]
+    final class PartiallyApplied[F[_], A] {
+      def apply[T](t: T)(implicit T: Recursive.Aux[T, F], F: Functor[F]): Free[F, A] =
+        t.ana[Free[F, A]](x => CoEnv(x.project.right[A]))
+    }
+  }
+
   def envT[E, W[_], A](e: E, wa: W[A]): EnvT[E, W, A] =
     EnvT((e, wa))
 
   def envTIso[E, W[_], A]: Iso[EnvT[E, W, A], (E, W[A])] =
     Iso((_: EnvT[E, W, A]).runEnvT)(EnvT(_))
+
+  def ginterpret[W[_], F[_], A, B](f: A => B, φ: GAlgebra[W, F, B])
+      : GAlgebra[W, CoEnv[A, F, ?], B] =
+    ginterpretM[W, Id, F, A, B](f, φ)
+
+  def einterpret[W[_]: Traverse, F[_], A, B](f: A => B, φ: ElgotAlgebra[W, F, B])
+      : ElgotAlgebra[W, CoEnv[A, F, ?], B] =
+    _.traverse(_.run).fold(f, φ)
 
   def project[T, F[_]: Functor](implicit T: Recursive.Aux[T, F]): Getter[T, F[T]] =
     Getter(T.project(_))

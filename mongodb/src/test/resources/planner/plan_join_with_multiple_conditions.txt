@@ -1,0 +1,127 @@
+Chain
+├─ $FoldLeftF
+│  ├─ Chain
+│  │  ├─ $ReadF(db; slamengine_commits)
+│  │  ├─ $SimpleMapF
+│  │  │  ├─ Map
+│  │  │  │  ╰─ Let(__val)
+│  │  │  │     ├─ JsCore([_._id, _])
+│  │  │  │     ╰─ JsCore([
+│  │  │  │               __val[0],
+│  │  │  │               [__val[0]],
+│  │  │  │               (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1] : undefined,
+│  │  │  │               (((isObject(
+│  │  │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].parents[0] : undefined) && (! Array.isArray(
+│  │  │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].parents[0] : undefined))) ? true : false) && (Array.isArray(
+│  │  │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].parents : undefined) ? true : false)) && ((isObject(
+│  │  │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined) && (! Array.isArray(
+│  │  │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined))) ? true : false),
+│  │  │  │               [
+│  │  │  │                 __val[0],
+│  │  │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1] : undefined,
+│  │  │  │                 (isObject(
+│  │  │  │                   (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined) && (! Array.isArray(
+│  │  │  │                   (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined))) ? true : false]])
+│  │  │  ╰─ Scope(Map())
+│  │  ├─ $ProjectF
+│  │  │  ├─ Name("0" -> { "$arrayElemAt": ["$$ROOT", { "$literal": NumberInt("3") }] })
+│  │  │  ├─ Name("src" -> "$$ROOT")
+│  │  │  ╰─ IgnoreId
+│  │  ├─ $MatchF
+│  │  │  ╰─ Doc
+│  │  │     ╰─ Expr($0 -> Eq(Bool(true)))
+│  │  ├─ $SimpleMapF
+│  │  │  ├─ Map
+│  │  │  │  ╰─ Obj
+│  │  │  │     ├─ Key(0: _.src[2].parents[0].sha)
+│  │  │  │     ├─ Key(1: _.src[2].author.login)
+│  │  │  │     ╰─ Key(content: _.src)
+│  │  │  ╰─ Scope(Map())
+│  │  ├─ $GroupF
+│  │  │  ├─ Grouped
+│  │  │  │  ╰─ Name("0" -> { "$push": "$content" })
+│  │  │  ╰─ By
+│  │  │     ├─ Name("0" -> "$0")
+│  │  │     ╰─ Name("1" -> "$1")
+│  │  ╰─ $ProjectF
+│  │     ├─ Name("_id" -> "$_id")
+│  │     ├─ Name("value")
+│  │     │  ├─ Name("left" -> "$0")
+│  │     │  ├─ Name("right" -> { "$literal": [] })
+│  │     │  ╰─ Name("_id" -> "$_id")
+│  │     ╰─ IncludeId
+│  ╰─ Chain
+│     ├─ $ReadF(db; slamengine_commits)
+│     ├─ $SimpleMapF
+│     │  ├─ Map
+│     │  │  ╰─ Let(__val)
+│     │  │     ├─ JsCore([_._id, _])
+│     │  │     ╰─ JsCore([
+│     │  │               __val[0],
+│     │  │               [__val[0]],
+│     │  │               (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1] : undefined,
+│     │  │               (((isObject(
+│     │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].parents[0] : undefined) && (! Array.isArray(
+│     │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].parents[0] : undefined))) ? true : false) && (Array.isArray(
+│     │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].parents : undefined) ? true : false)) && ((isObject(
+│     │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined) && (! Array.isArray(
+│     │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined))) ? true : false),
+│     │  │               [
+│     │  │                 __val[0],
+│     │  │                 (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1] : undefined,
+│     │  │                 (isObject(
+│     │  │                   (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined) && (! Array.isArray(
+│     │  │                   (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].author : undefined))) ? true : false]])
+│     │  ╰─ Scope(Map())
+│     ├─ $ProjectF
+│     │  ├─ Name("0" -> {
+│     │  │       "$arrayElemAt": [
+│     │  │         { "$arrayElemAt": ["$$ROOT", { "$literal": NumberInt("4") }] },
+│     │  │         { "$literal": NumberInt("2") }]
+│     │  │     })
+│     │  ├─ Name("src" -> "$$ROOT")
+│     │  ╰─ IgnoreId
+│     ├─ $MatchF
+│     │  ╰─ Doc
+│     │     ╰─ Expr($0 -> Eq(Bool(true)))
+│     ├─ $ProjectF
+│     │  ├─ Name("0" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("4") }] })
+│     │  ╰─ IgnoreId
+│     ├─ $MapF
+│     │  ├─ JavaScript(function (key, value) {
+│     │  │               return [
+│     │  │                 { "0": value["0"][1].sha, "1": value["0"][1].author.login },
+│     │  │                 { "left": [], "right": [value["0"]] }]
+│     │  │             })
+│     │  ╰─ Scope(Map())
+│     ╰─ $ReduceF
+│        ├─ JavaScript(function (key, values) {
+│        │               var result = { "left": [], "right": [] };
+│        │               values.forEach(
+│        │                 function (value) {
+│        │                   result.left = result.left.concat(value.left);
+│        │                   result.right = result.right.concat(value.right)
+│        │                 });
+│        │               return result
+│        │             })
+│        ╰─ Scope(Map())
+├─ $MatchF
+│  ╰─ Doc
+│     ├─ NotExpr($left -> Size(0))
+│     ╰─ NotExpr($right -> Size(0))
+├─ $UnwindF(DocField(BsonField.Name("right")))
+├─ $UnwindF(DocField(BsonField.Name("left")))
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(child: (isObject(_.left[2]) && (! Array.isArray(_.left[2]))) ? _.left[2].sha : undefined)
+│  │     ├─ Key(c_auth: ((isObject(_.left[2]) && (! Array.isArray(_.left[2]))) && (isObject(_.left[2].author) && (! Array.isArray(_.left[2].author)))) ? _.left[2].author.login : undefined)
+│  │     ├─ Key(parent: (isObject(_.right[1]) && (! Array.isArray(_.right[1]))) ? _.right[1].sha : undefined)
+│  │     ╰─ Key(p_auth: ((isObject(_.right[1]) && (! Array.isArray(_.right[1]))) && (isObject(_.right[1].author) && (! Array.isArray(_.right[1].author)))) ? _.right[1].author.login : undefined)
+│  ╰─ Scope(Map())
+╰─ $ProjectF
+   ├─ Name("child" -> true)
+   ├─ Name("c_auth" -> true)
+   ├─ Name("parent" -> true)
+   ├─ Name("p_auth" -> true)
+   ╰─ IgnoreId

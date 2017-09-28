@@ -17,10 +17,12 @@
 package quasar.api
 
 import slamdata.Predef._
+import quasar.api.MessageFormat.{Csv, JsonContentType}
 import quasar.Data
 import quasar.contrib.argonaut._
 import quasar.effect.Failure
 import quasar.ejson.{EJson, JsonCodec}
+import quasar.fp.ski._
 import quasar.fp.numeric._
 import quasar.contrib.pathy.AFile
 
@@ -84,8 +86,12 @@ package object services {
   ): QResponse[S] = {
     val headers: List[Header] = `Content-Type`(MediaType.`application/zip`) :: 
       (format.disposition.toList: List[Header])
-    val p = format.encode(data).map(str => ByteVector.view(str.getBytes(StandardCharsets.UTF_8))) 
-    val f = currentDir[Sandboxed] </> file1[Sandboxed](fileName(filePath)) 
+    val p = format.encode(data).map(str => ByteVector.view(str.getBytes(StandardCharsets.UTF_8)))
+    val suffix = format match {
+          case JsonContentType(_, _, _) => "json"
+          case Csv(_, _) => "csv"
+        }
+    val f = currentDir[Sandboxed] </> file1[Sandboxed](fileName(filePath).changeExtension(κ(suffix))) 
     val z = Zip.zipFiles(Map(f -> p))
     QResponse.headers.modify(_ ++ headers)(QResponse.streaming(z))
   }

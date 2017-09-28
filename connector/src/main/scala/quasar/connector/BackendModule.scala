@@ -182,7 +182,6 @@ trait BackendModule {
   def UnicoalesceCap[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT]: Unicoalesce.Capture[T, QS[T]]
 
   def optimize[T[_[_]]: BirecursiveT: EqualT: ShowT]: QSM[T, T[QSM[T, ?]]] => QSM[T, T[QSM[T, ?]]]
-
   type Config
   def parseConfig(uri: ConnectionUri): DefErrT[Task, Config]
 
@@ -195,7 +194,7 @@ trait BackendModule {
   trait QueryFileModule {
     import QueryFile._
 
-    def executePlan(repr: Repr, out: AFile): Backend[AFile]
+    def executePlan(repr: Repr, out: AFile): Backend[Unit]
     def evaluatePlan(repr: Repr): Backend[ResultHandle]
     def more(h: ResultHandle): Backend[Vector[Data]]
     def close(h: ResultHandle): Configured[Unit]

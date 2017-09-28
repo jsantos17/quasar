@@ -19,6 +19,7 @@ package quasar.metastore
 import slamdata.Predef._
 import quasar.contrib.pathy._
 import quasar.db._
+import quasar.fp.ski.κ
 import quasar.fs.mount.cache.ViewCache
 import quasar.fs.mount.{MountConfig, MountType, MountingError}, MountConfig.FileSystemConfig
 
@@ -56,9 +57,10 @@ trait MetaStoreAccess {
   def lookupViewCache(path: AFile): ConnectionIO[Option[ViewCache]] =
     (Queries.lookupViewCache(path) ∘ (_.vc)).option
 
-  def updateInsertViewCache(path: AFile, viewCache: ViewCache): ConnectionIO[Unit] =
-    runOneRowUpdateOpt(Queries.updateViewCache(path, viewCache)).isEmpty >>= (_.whenM(
-      runOneRowUpdate(Queries.insertViewCache(path, viewCache))))
+  def insertOrUpdateViewCache(path: AFile, viewCache: ViewCache): ConnectionIO[Unit] =
+    lookupViewCache(path) >>= (_.cata(
+      κ(runOneRowUpdate(Queries.updateViewCache(path, viewCache))),
+      Queries.insertViewCache(path, viewCache).run.void))
 
   def updateViewCacheErrorMsg(path: AFile, errorMsg: String): ConnectionIO[Unit] =
     runOneRowUpdate(Queries.updateViewCacheErrorMsg(path, errorMsg))

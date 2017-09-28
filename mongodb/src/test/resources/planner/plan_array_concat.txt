@@ -1,0 +1,35 @@
+Chain
+├─ $ReadF(db; zips)
+╰─ $ProjectF
+   ├─ Name("value" -> {
+   │       "$cond": [
+   │         {
+   │           "$or": [
+   │             {
+   │               "$and": [
+   │                 { "$lte": [{ "$literal": [] }, "$loc"] },
+   │                 { "$lt": ["$loc", { "$literal": BinData(0, "") }] }]
+   │             },
+   │             {
+   │               "$and": [
+   │                 { "$lte": [{ "$literal": "" }, "$loc"] },
+   │                 { "$lt": ["$loc", { "$literal": {  } }] }]
+   │             }]
+   │         },
+   │         {
+   │           "$let": {
+   │             "vars": {
+   │               "a1": "$loc",
+   │               "a2": { "$literal": [NumberInt("0"), NumberInt("1"), NumberInt("2")] }
+   │             },
+   │             "in": {
+   │               "$cond": [
+   │                 { "$and": [{ "$isArray": "$$a1" }, { "$isArray": "$$a2" }] },
+   │                 { "$concatArrays": ["$$a1", "$$a2"] },
+   │                 { "$concat": ["$$a1", "$$a2"] }]
+   │             }
+   │           }
+   │         },
+   │         { "$literal": undefined }]
+   │     })
+   ╰─ ExcludeId

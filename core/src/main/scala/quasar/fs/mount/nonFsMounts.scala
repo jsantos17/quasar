@@ -162,7 +162,7 @@ object nonFsMounts {
             manage.delete(f))
         ).run
 
-      vcacheGet(path).fold(cacheDelete, delete).join
+      vcacheGet(path).fold(cacheDelete(_) >> delete, delete).join
     }
 
     λ[ManageFile ~> Free[S, ?]] {

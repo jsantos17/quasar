@@ -179,7 +179,7 @@ object MapFuncCore {
         : CoEnv[A, MapFunc[T, ?], FreeMapA[T, A]] =
       args.toList match {
         case h :: t => t.foldLeft(h)((a, b) => rollMF[T, A](MFC(ConcatMaps(a, b))).embed).project
-        case Nil    => rollMF[T, A](MFC(Constant(EJson.fromCommon(ejson.Arr[T[EJson]](Nil)))))
+        case Nil    => rollMF[T, A](MFC(EmptyMap[T, FreeMapA[T, A]]))
       }
 
     @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
@@ -328,7 +328,7 @@ object MapFuncCore {
       case _ => none
     }
 
-  def normalize[T[_[_]]: BirecursiveT: EqualT: ShowT, A: Equal: Show]
+  def normalize[T[_[_]]: BirecursiveT: EqualT, A: Equal]
       : CoMapFuncR[T, A] => CoMapFuncR[T, A] =
     repeatedly(applyTransforms(
       foldConstant[T, A].apply(_) ∘ (const => rollMF[T, A](MFC(Constant(const)))),
@@ -344,7 +344,7 @@ object MapFuncCore {
 
   // TODO: This could be split up as it is in LP, with each function containing
   //       its own normalization.
-  private def rewrite[T[_[_]]: BirecursiveT: EqualT: ShowT, A: Equal: Show]:
+  private def rewrite[T[_[_]]: BirecursiveT: EqualT, A: Equal]:
       CoMapFuncR[T, A] => Option[CoMapFuncR[T, A]] =
     _.run.toOption >>= (MFC.unapply _) >>= {
       case Eq(v1, v2) if v1 ≟ v2 =>

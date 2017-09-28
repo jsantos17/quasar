@@ -255,13 +255,9 @@ package object fp
       : CoEnv[A, F, B] => CoEnv[A, F, B] =
     liftCoM[T, Id, F, A, B](f)
 
-  def idPrism[F[_]] = PrismNT[F, F](
-    λ[F ~> (Option ∘ F)#λ](_.some),
-    reflNT[F])
+  def idPrism[F[_]] = PrismNT.id[F]
 
-  def coenvPrism[F[_], A] = PrismNT[CoEnv[A, F, ?], F](
-    λ[CoEnv[A, F, ?] ~> λ[α => Option[F[α]]]](_.run.toOption),
-    λ[F ~> CoEnv[A, F, ?]](fb => CoEnv(fb.right[A])))
+  def coenvPrism[F[_], A] = PrismNT.coEnv[F, A]
 
   def coenvBijection[T[_[_]]: BirecursiveT, F[_]: Functor, A]:
       Bijection[Free[F, A], T[CoEnv[A, F, ?]]] =

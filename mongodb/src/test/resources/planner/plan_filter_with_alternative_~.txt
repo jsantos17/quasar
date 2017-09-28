@@ -1,0 +1,25 @@
+Chain
+├─ $ReadF(db; a)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: _.pattern)
+│  │     ├─ Key(1: _.target)
+│  │     ├─ Key(2: (new RegExp(_.pattern, "m")).test("foo"))
+│  │     ├─ Key(3: (new RegExp(_.pattern, "m")).test(_.target))
+│  │     ╰─ Key(src: _)
+│  ╰─ Scope(Map())
+├─ $MatchF
+│  ╰─ And
+│     ├─ Doc
+│     │  ╰─ Expr($0 -> Type(Text))
+│     ├─ Doc
+│     │  ╰─ Expr($1 -> Type(Text))
+│     ╰─ Or
+│        ├─ Doc
+│        │  ╰─ Expr($2 -> Eq(Bool(true)))
+│        ╰─ Doc
+│           ╰─ Expr($3 -> Eq(Bool(true)))
+╰─ $ProjectF
+   ├─ Name("value" -> "$src")
+   ╰─ ExcludeId

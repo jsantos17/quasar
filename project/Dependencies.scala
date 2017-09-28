@@ -1,10 +1,9 @@
 package quasar.project
 
-import scala.{Option, Boolean}
-import java.lang.{String, System}
+import scala.Boolean
 import scala.collection.Seq
 
-import sbt._, Keys._
+import sbt._
 
 object Dependencies {
   private val algebraVersion      = "0.7.0"
@@ -97,6 +96,17 @@ object Dependencies {
       // They are needed to connect to mongodb vis SSL which we do under certain configurations
       "io.netty"    % "netty-buffer"         % nettyVersion,
       "io.netty"    % "netty-handler"        % nettyVersion
+    )
+  }
+
+  def rdbmscore = {
+    Seq(
+      "org.tpolecat" %% "doobie-core"       % doobieVersion,
+      "org.tpolecat" %% "doobie-postgres"   % doobieVersion,
+      "org.tpolecat" %% "doobie-hikari"     % doobieVersion,
+      "org.tpolecat" %% "doobie-h2"         % doobieVersion,
+      ("org.tpolecat" %% "doobie-specs2"     % doobieVersion % Test)
+        .exclude("org.specs2", "specs2-core_2.11") // conflicting version
     )
   }
 

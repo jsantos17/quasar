@@ -1,0 +1,49 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: [_.city])
+│  │     ╰─ Key(content: _)
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  │  ├─ Name("f0" -> { "$first": "$content.city" })
+│  │  ╰─ Name("f1" -> {
+│  │          "$sum": {
+│  │            "$cond": [
+│  │              {
+│  │                "$and": [
+│  │                  { "$lt": [{ "$literal": null }, "$content.pop"] },
+│  │                  { "$lt": ["$content.pop", { "$literal": "" }] }]
+│  │              },
+│  │              "$content.pop",
+│  │              { "$literal": undefined }]
+│  │          }
+│  │        })
+│  ╰─ By
+│     ╰─ Name("0" -> "$0")
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Arr
+│  │     │  ├─ JsCore(_._id["0"])
+│  │     │  ├─ Obj
+│  │     │  │  ├─ Key(city: _.f0)
+│  │     │  │  ╰─ Key(pop: _.f1)
+│  │     │  ╰─ JsCore(_.f1)
+│  │     ╰─ JsCore([__val[1], __val])
+│  ╰─ Scope(Map())
+├─ $ProjectF
+│  ├─ Name("0" -> {
+│  │       "$arrayElemAt": [
+│  │         { "$arrayElemAt": ["$$ROOT", { "$literal": NumberInt("1") }] },
+│  │         { "$literal": NumberInt("2") }]
+│  │     })
+│  ├─ Name("src" -> "$$ROOT")
+│  ╰─ IgnoreId
+├─ $SortF
+│  ╰─ SortKey(0 -> Ascending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

@@ -20,6 +20,7 @@ import slamdata.Predef._
 import quasar.{Data, queryPlan, Variables}
 import quasar.fp.ski.κ
 import quasar.contrib.pathy._
+import quasar.contrib.scalaz.disjunction._
 import quasar.fp.numeric._
 import quasar.fs._
 import quasar.sql.Sql
@@ -52,7 +53,7 @@ class FilesystemQueries[S[_]](implicit val Q: QueryFile.Ops[S]) {
         .flatMap(Q.evaluate(_).translate[CompExecM](execToCompExec)))
 
   /** Returns the path to the result of executing the given SQL^2 query
-    * using the given output file if possible.
+    * using the given output file.
     */
   def executeQuery(
     query: Fix[Sql],
@@ -60,10 +61,10 @@ class FilesystemQueries[S[_]](implicit val Q: QueryFile.Ops[S]) {
     basePath: ADir,
     out: AFile)(
     implicit W: WriteFile.Ops[S], MF: ManageFile.Ops[S]):
-      CompExecM[AFile] =
+      CompExecM[Unit] =
     compToCompExec(queryPlan(query, vars, basePath, 0L, None))
       .flatMap(lp => execToCompExec(lp.fold(
-        d => fsErrToExec(W.saveThese(out, d.toVector).flatMap(fse => EitherT.fromDisjunction(fse.headOption <\/ out))),
+        d => fsErrToExec(W.saveThese(out, d.toVector).flatMap(fse => (fse.headOption <\/ (())).liftT)),
         Q.execute(_, out))))
 
   /** Returns the physical execution plan for the given SQL^2 query. */

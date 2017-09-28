@@ -146,7 +146,7 @@ object MongoDb
     private def mkInterp[F[_] : Functor](implicit C: MonadReader_[F, Config]): F[fs.QueryFileInterpreter] =
       config[F].map(cfg => new fs.QueryFileInterpreter(cfg.wfExec))
 
-    def executePlan(repr: Repr, out: AFile): Backend[AFile] =
+    def executePlan(repr: Repr, out: AFile): Backend[Unit] =
       mkInterp[Backend] >>= (i => toBackendP(i.execPlan(repr, out)))
 
     def evaluatePlan(repr: Repr): Backend[ResultHandle] =

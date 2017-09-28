@@ -1,0 +1,27 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $MatchF
+│  ╰─ Doc
+│     ╰─ Expr($state -> Eq(Text(CO)))
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: [_.city])
+│  │     ╰─ Key(content: _)
+│  ╰─ Scope(Map())
+╰─ $GroupF
+   ├─ Grouped
+   │  ╰─ Name("sm" -> {
+   │          "$sum": {
+   │            "$cond": [
+   │              {
+   │                "$and": [
+   │                  { "$lt": [{ "$literal": null }, "$content.pop"] },
+   │                  { "$lt": ["$content.pop", { "$literal": "" }] }]
+   │              },
+   │              "$content.pop",
+   │              { "$literal": undefined }]
+   │          }
+   │        })
+   ╰─ By
+      ╰─ Name("0" -> "$0")

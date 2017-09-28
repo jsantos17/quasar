@@ -1,0 +1,14 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: Array.isArray(_.loc) ? -1 !== _.loc.indexOf(43.058514) : undefined)
+│  │     ╰─ Key(src: _)
+│  ╰─ Scope(Map())
+├─ $MatchF
+│  ╰─ Doc
+│     ╰─ Expr($0 -> Eq(Bool(true)))
+╰─ $ProjectF
+   ├─ Name("value" -> "$src")
+   ╰─ ExcludeId

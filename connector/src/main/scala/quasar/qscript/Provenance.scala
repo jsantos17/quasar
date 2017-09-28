@@ -18,6 +18,7 @@ package quasar.qscript.provenance
 
 import slamdata.Predef._
 import quasar.contrib.matryoshka._
+import quasar.contrib.scalaz.foldable._
 import quasar.ejson.EJson
 import quasar.fp._
 import quasar.qscript._
@@ -50,11 +51,8 @@ object Provenance {
     val P = new ProvenanceT[T]
     import P.{flattenBoth, nubNadas}
 
-    def equalAsSets(xs: List[Provenance[T]], ys: List[Provenance[T]]): Boolean =
-      xs.all(ys element _) && ys.all(xs element _)
-
     def bothEq(x: Provenance[T], y: Provenance[T]): Boolean =
-      equalAsSets((nubNadas <<< flattenBoth)(x), (nubNadas <<< flattenBoth)(y))
+      (nubNadas <<< flattenBoth)(x) equalsAsSets (nubNadas <<< flattenBoth)(y)
 
     Equal.equal {
       case (Nada(),        Nada())        => true

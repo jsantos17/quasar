@@ -1,0 +1,39 @@
+Chain
+├─ $ReadF(db; zips)
+╰─ $SimpleMapF
+   ├─ Map
+   │  ╰─ Obj
+   │     ├─ Key(s)
+   │     │  ╰─ Let(__val)
+   │     │     ├─ JsCore([_._id, _])
+   │     │     ╰─ Arr
+   │     │        ├─ Obj
+   │     │        │  ╰─ Key(zip: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1]._id : undefined)
+   │     │        ├─ Obj
+   │     │        │  ╰─ Key(loc: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined)
+   │     │        ╰─ JsCore([
+   │     │                  __val[0],
+   │     │                  (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined])
+   │     ╰─ Key(f)
+   │        ╰─ Let(__val)
+   │           ├─ Let(__val)
+   │           │  ├─ JsCore([_._id, _])
+   │           │  ╰─ Arr
+   │           │     ├─ Obj
+   │           │     │  ╰─ Key(zip: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1]._id : undefined)
+   │           │     ├─ Obj
+   │           │     │  ╰─ Key(loc: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined)
+   │           │     ╰─ JsCore([
+   │           │               __val[0],
+   │           │               (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].loc : undefined])
+   │           ╰─ JsCore(Array.isArray(__val[2][1]) ? __val[2][1] : undefined)
+   ├─ Flatten
+   │  ╰─ JsCore(_.f)
+   ├─ Map
+   │  ╰─ SpliceObjects
+   │     ├─ SpliceObjects
+   │     │  ├─ JsCore(_.s[0])
+   │     │  ╰─ JsCore(_.s[1])
+   │     ╰─ Obj
+   │        ╰─ Key(coord: _.f)
+   ╰─ Scope(Map())

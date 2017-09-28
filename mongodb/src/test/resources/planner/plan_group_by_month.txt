@@ -1,0 +1,40 @@
+Chain
+├─ $ReadF(db; caloriesBurnedData)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: [(_.date instanceof Date) ? _.date.getUTCMonth() + 1 : undefined])
+│  │     ╰─ Key(content: _)
+│  ╰─ Scope(Map())
+╰─ $GroupF
+   ├─ Grouped
+   │  ├─ Name("a" -> {
+   │  │       "$avg": {
+   │  │         "$cond": [
+   │  │           {
+   │  │             "$and": [
+   │  │               { "$lt": [{ "$literal": null }, "$content.score"] },
+   │  │               { "$lt": ["$content.score", { "$literal": "" }] }]
+   │  │           },
+   │  │           "$content.score",
+   │  │           { "$literal": undefined }]
+   │  │       }
+   │  │     })
+   │  ╰─ Name("m" -> {
+   │          "$first": {
+   │            "$cond": [
+   │              {
+   │                "$and": [
+   │                  {
+   │                    "$lte": [
+   │                      { "$literal": ISODate("-292275055-05-16T16:47:04.192Z") },
+   │                      "$content.date"]
+   │                  },
+   │                  { "$lt": ["$content.date", { "$literal": new RegExp("", "") }] }]
+   │              },
+   │              { "$month": "$content.date" },
+   │              { "$literal": undefined }]
+   │          }
+   │        })
+   ╰─ By
+      ╰─ Name("0" -> "$0")

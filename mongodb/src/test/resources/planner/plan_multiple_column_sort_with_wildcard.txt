@@ -1,0 +1,21 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Let(__val)
+│  │     │  ├─ JsCore([_._id, _])
+│  │     │  ╰─ JsCore([
+│  │     │            (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1] : undefined,
+│  │     │            __val])
+│  │     ╰─ Obj
+│  │        ├─ Key(0: (isObject(__val[1][1]) && (! Array.isArray(__val[1][1]))) ? __val[1][1].pop : undefined)
+│  │        ├─ Key(1: (isObject(__val[1][1]) && (! Array.isArray(__val[1][1]))) ? __val[1][1].city : undefined)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $SortF
+│  ├─ SortKey(0 -> Ascending)
+│  ╰─ SortKey(1 -> Descending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

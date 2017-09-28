@@ -1,0 +1,24 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ JsCore(remove(_, "_id"))
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  ╰─ By
+│     ╰─ Name("0" -> "$$ROOT")
+├─ $ProjectF
+│  ├─ Name("f0" -> "$_id.0")
+│  ╰─ IgnoreId
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ JsCore([[_._id["0"]], _.f0])
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  │  ╰─ Name("f0" -> { "$sum": { "$literal": NumberInt("1") } })
+│  ╰─ By({ "$literal": null })
+╰─ $ProjectF
+   ├─ Name("value" -> "$f0")
+   ╰─ ExcludeId

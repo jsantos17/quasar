@@ -442,7 +442,7 @@ class ViewFileSystemSpec extends quasar.Qspec with TreeMatchers {
       val f = manage.delete(p).run
 
       viewInterpTrace(vc, f) must_=== ViewInterpResultTrace(
-        Vector.empty,
+        traceInterp(f, Map())._1,
         VS.empty,
         \/.right(\/.right(())))
     }

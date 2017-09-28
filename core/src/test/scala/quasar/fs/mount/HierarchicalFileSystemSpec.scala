@@ -183,7 +183,7 @@ class HierarchicalFileSystemSpec extends quasar.Qspec with FileSystemFixture {
         "containing no paths succeeds" >> {
           val out = mntC </> file("outfile")
           runMntd(query.execute(lpf.constant(Data.Obj(ListMap("0" -> Data.Int(3)))), out).run.value)
-            .eval(emptyMS).toEither must beRight(out)
+            .eval(emptyMS).toEither must beRight(())
         }
       }
 

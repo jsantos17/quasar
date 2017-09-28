@@ -68,7 +68,7 @@ object CliOptions {
       (l composeLens config).set(Some(x))(c)
     } text("path to the config file to use")
 
-    opt[File]('p', "plugins") validate { x =>
+    opt[File]('P', "plugins") validate { x =>
       if (!x.exists()) {
         Left(s"plugin directory $x does not exist")
       } else {

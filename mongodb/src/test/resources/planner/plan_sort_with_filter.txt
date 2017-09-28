@@ -1,0 +1,38 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $MatchF
+│  ╰─ And
+│     ├─ Or
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Int32))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Int64))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Dec))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Text))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Date))
+│     │  ╰─ Doc
+│     │     ╰─ Expr($pop -> Type(Bool))
+│     ╰─ Doc
+│        ╰─ Expr($pop -> Lte(Int32(1000)))
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Arr
+│  │     │  ├─ Obj
+│  │     │  │  ├─ Key(city: _.city)
+│  │     │  │  ╰─ Key(pop: _.pop)
+│  │     │  ╰─ Ident(_)
+│  │     ╰─ Obj
+│  │        ├─ Key(0: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined)
+│  │        ├─ Key(1: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].city : undefined)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $SortF
+│  ├─ SortKey(0 -> Descending)
+│  ╰─ SortKey(1 -> Ascending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

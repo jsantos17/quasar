@@ -23,8 +23,8 @@ import quasar.fs._
 import quasar.fs.mount.{BackendDef, ConnectionUri, MountConfig}
 import quasar.main.{ClassName, ClassPath, BackendConfig}
 
-import pathy.Path._
 import knobs.{Required, Optional, FileResource}
+import pathy.Path._
 import scalaz._, Scalaz._
 import scalaz.concurrent._
 
@@ -61,13 +61,14 @@ object TestConfig {
   val SPARK_LOCAL     = ExternalBackendRef(BackendRef(BackendName("spark_local")      , BackendCapability.All), FileSystemType("spark-local"))
   val SPARK_ELASTIC   = ExternalBackendRef(BackendRef(BackendName("spark_elastic")    , BackendCapability.All), FileSystemType("spark-elastic"))
   val SPARK_CASSANDRA = ExternalBackendRef(BackendRef(BackendName("spark_cassandra")  , BackendCapability.All), FileSystemType("spark-cassandra"))
+  val POSTGRES        = ExternalBackendRef(BackendRef(BackendName("postgres")         , BackendCapability.All), FileSystemType("postgres"))
 
   lazy val backendRefs: List[ExternalBackendRef] = List(
     COUCHBASE,
     MARKLOGIC_JSON, MARKLOGIC_XML,
     MIMIR,
     MONGO_2_6, MONGO_3_0, MONGO_3_2, MONGO_3_4, MONGO_READ_ONLY,
-    SPARK_HDFS, SPARK_LOCAL, SPARK_ELASTIC, SPARK_CASSANDRA)
+    SPARK_HDFS, SPARK_LOCAL, SPARK_ELASTIC, SPARK_CASSANDRA, POSTGRES)
 
   final case class UnsupportedFileSystemConfig(c: MountConfig)
     extends RuntimeException(s"Unsupported filesystem config: $c")

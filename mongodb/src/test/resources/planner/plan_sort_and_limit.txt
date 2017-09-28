@@ -1,0 +1,20 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Arr
+│  │     │  ├─ Obj
+│  │     │  │  ├─ Key(city: (isObject(_) && (! Array.isArray(_))) ? _.city : undefined)
+│  │     │  │  ╰─ Key(pop: (isObject(_) && (! Array.isArray(_))) ? _.pop : undefined)
+│  │     │  ╰─ Ident(_)
+│  │     ╰─ Obj
+│  │        ├─ Key(0: (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $SortF
+│  ╰─ SortKey(0 -> Descending)
+├─ $LimitF(5)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

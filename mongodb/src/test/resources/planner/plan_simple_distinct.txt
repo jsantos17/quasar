@@ -1,0 +1,22 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(f0)
+│  │     │  ╰─ Obj
+│  │     │     ├─ Key(city: _.city)
+│  │     │     ╰─ Key(state: _.state)
+│  │     ╰─ Key(b0)
+│  │        ╰─ Obj
+│  │           ├─ Key(city: _.city)
+│  │           ╰─ Key(state: _.state)
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  │  ╰─ Name("f0" -> { "$first": "$f0" })
+│  ╰─ By
+│     ╰─ Name("0" -> "$b0")
+╰─ $ProjectF
+   ├─ Name("value" -> "$f0")
+   ╰─ ExcludeId

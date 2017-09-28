@@ -408,12 +408,10 @@ object SparkHdfs extends SparkCore with ChrootedInterpreter {
       val delete: Free[Eff, FileSystemError \/ Unit] = for {
         path <- toPath(p)
         hdfs <- hdfsFSOps.ask
-      } yield (if(hdfs.exists(path)) {
-        hdfs.delete(path, true).right[FileSystemError]
-      }
-      else {
-        pathErr(pathNotFound(p)).left[Unit]
-      }).as(())
+      } yield (if (hdfs.exists(path))
+        hdfs.delete(path, true).right[FileSystemError].void
+      else
+        pathErr(pathNotFound(p)).left[Unit])
 
       delete.liftB.unattempt
     }

@@ -1,0 +1,34 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $MatchF
+│  ╰─ And
+│     ├─ Or
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Int32))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Int64))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Dec))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Text))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Date))
+│     │  ╰─ Doc
+│     │     ╰─ Expr($pop -> Type(Bool))
+│     ╰─ Doc
+│        ╰─ Expr($pop -> Lt(Int32(1000)))
+╰─ $SimpleMapF
+   ├─ Map
+   │  ╰─ SpliceObjects
+   │     ├─ SpliceObjects
+   │     │  ├─ SpliceObjects
+   │     │  │  ├─ SpliceObjects
+   │     │  │  │  ├─ Obj
+   │     │  │  │  │  ╰─ Key(state2: _.state)
+   │     │  │  │  ╰─ Ident(_)
+   │     │  │  ╰─ Obj
+   │     │  │     ╰─ Key(city2: _.city)
+   │     │  ╰─ Ident(_)
+   │     ╰─ Obj
+   │        ╰─ Key(pop2: _.pop)
+   ╰─ Scope(Map())

@@ -1,0 +1,36 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $MatchF
+│  ╰─ And
+│     ├─ Or
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Int32))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Int64))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Dec))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Text))
+│     │  ├─ Doc
+│     │  │  ╰─ Expr($pop -> Type(Date))
+│     │  ╰─ Doc
+│     │     ╰─ Expr($pop -> Type(Bool))
+│     ╰─ Doc
+│        ╰─ Expr($pop -> Gte(Int32(1000)))
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Let(__val)
+│  │     ├─ Arr
+│  │     │  ├─ Obj
+│  │     │  │  ╰─ Key(popInK: ((isNumber(_.pop) || ((_.pop instanceof NumberInt) || (_.pop instanceof NumberLong))) || (_.pop instanceof Date)) ? _.pop / 1000 : undefined)
+│  │     │  ╰─ Ident(_)
+│  │     ╰─ Obj
+│  │        ├─ Key(0: (((isNumber(
+│  │        │      (isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) || ((((isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) instanceof NumberInt) || (((isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) instanceof NumberLong))) || (((isObject(__val[1]) && (! Array.isArray(__val[1]))) ? __val[1].pop : undefined) instanceof Date)) && (isObject(__val[1]) && (! Array.isArray(__val[1])))) ? __val[1].pop / 1000 : undefined)
+│  │        ╰─ Key(src: __val)
+│  ╰─ Scope(Map())
+├─ $SortF
+│  ╰─ SortKey(0 -> Ascending)
+╰─ $ProjectF
+   ├─ Name("value" -> { "$arrayElemAt": ["$src", { "$literal": NumberInt("0") }] })
+   ╰─ ExcludeId

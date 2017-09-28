@@ -1,0 +1,91 @@
+Chain
+├─ $ReadF(db; zips)
+├─ $SimpleMapF
+│  ├─ Map
+│  │  ╰─ Obj
+│  │     ├─ Key(0: [_.city, _.state])
+│  │     ╰─ Key(content: _)
+│  ╰─ Scope(Map())
+├─ $GroupF
+│  ├─ Grouped
+│  │  ├─ Name("f0" -> {
+│  │  │       "$first": {
+│  │  │         "$cond": [
+│  │  │           {
+│  │  │             "$or": [
+│  │  │               {
+│  │  │                 "$and": [
+│  │  │                   { "$lte": [{ "$literal": [] }, "$content.city"] },
+│  │  │                   { "$lt": ["$content.city", { "$literal": BinData(0, "") }] }]
+│  │  │               },
+│  │  │               {
+│  │  │                 "$and": [
+│  │  │                   { "$lte": [{ "$literal": "" }, "$content.city"] },
+│  │  │                   { "$lt": ["$content.city", { "$literal": {  } }] }]
+│  │  │               }]
+│  │  │           },
+│  │  │           "$content.city",
+│  │  │           { "$literal": undefined }]
+│  │  │       }
+│  │  │     })
+│  │  ├─ Name("f1" -> {
+│  │  │       "$first": {
+│  │  │         "$cond": [
+│  │  │           {
+│  │  │             "$or": [
+│  │  │               {
+│  │  │                 "$and": [
+│  │  │                   { "$lte": [{ "$literal": [] }, "$content.state"] },
+│  │  │                   { "$lt": ["$content.state", { "$literal": BinData(0, "") }] }]
+│  │  │               },
+│  │  │               {
+│  │  │                 "$and": [
+│  │  │                   { "$lte": [{ "$literal": "" }, "$content.state"] },
+│  │  │                   { "$lt": ["$content.state", { "$literal": {  } }] }]
+│  │  │               }]
+│  │  │           },
+│  │  │           "$content.state",
+│  │  │           { "$literal": undefined }]
+│  │  │       }
+│  │  │     })
+│  │  ╰─ Name("f2" -> {
+│  │          "$sum": {
+│  │            "$cond": [
+│  │              {
+│  │                "$and": [
+│  │                  { "$lt": [{ "$literal": null }, "$content.pop"] },
+│  │                  { "$lt": ["$content.pop", { "$literal": "" }] }]
+│  │              },
+│  │              "$content.pop",
+│  │              { "$literal": undefined }]
+│  │          }
+│  │        })
+│  ╰─ By
+│     ╰─ Name("0" -> "$0")
+╰─ $ProjectF
+   ├─ Name("0" -> {
+   │       "$let": {
+   │         "vars": {
+   │           "a1": {
+   │             "$let": {
+   │               "vars": { "a1": "$f0", "a2": { "$literal": ", " } },
+   │               "in": {
+   │                 "$cond": [
+   │                   { "$and": [{ "$isArray": "$$a1" }, { "$isArray": "$$a2" }] },
+   │                   { "$concatArrays": ["$$a1", "$$a2"] },
+   │                   { "$concat": ["$$a1", "$$a2"] }]
+   │               }
+   │             }
+   │           },
+   │           "a2": "$f1"
+   │         },
+   │         "in": {
+   │           "$cond": [
+   │             { "$and": [{ "$isArray": "$$a1" }, { "$isArray": "$$a2" }] },
+   │             { "$concatArrays": ["$$a1", "$$a2"] },
+   │             { "$concat": ["$$a1", "$$a2"] }]
+   │         }
+   │       }
+   │     })
+   ├─ Name("1" -> "$f2")
+   ╰─ IgnoreId

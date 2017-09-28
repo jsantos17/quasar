@@ -2,13 +2,13 @@ package github
 
 import java.lang.{RuntimeException, String, System}
 import scala.{Boolean, Option, Predef}
-import scala.collection.{JavaConversions, Seq}, JavaConversions._
+import scala.collection.{JavaConverters, Seq}, JavaConverters._
 import scala.util.{Failure, Success, Try}
 
 import org.kohsuke.github._
 import sbt._, Keys._
 
-object GithubPlugin extends Plugin {
+object GithubPlugin extends AutoPlugin {
   object GithubKeys {
     lazy val repoSlug       = settingKey[String]("The repo slug, e.g. 'quasar-analytics/quasar'")
     lazy val tag            = settingKey[String]("The name of the tag, e.g. v1.2.3")
@@ -66,7 +66,7 @@ object GithubPlugin extends Plugin {
         val repo = github.getRepository(repoSlug.value)
 
         val body =
-          repo.listTags.find(_.getName == tag.value).map { tagUnpopulated =>
+          repo.listTags.asScala.find(_.getName == tag.value).map { tagUnpopulated =>
             repo.getCommit(tagUnpopulated.getCommit.getSHA1).getCommitShortInfo.getMessage
           }.getOrElse(scala.sys.error("Tag not found"))
 
@@ -79,7 +79,7 @@ object GithubPlugin extends Plugin {
         log.info("commitish   = " + commitish.value)
 
         val existingRelease =
-          repo.listReleases.find(_.getName == releaseName.value)
+          repo.listReleases.asScala.find(_.getName == releaseName.value)
 
         existingRelease.getOrElse {
           val releaseBuilder = repo

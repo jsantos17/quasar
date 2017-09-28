@@ -31,7 +31,7 @@ trait ManagedQueryFile[C] { self: BackendModule =>
   def ResultKvsM: Kvs[M, ResultHandle, C]
 
   trait ManagedQueryFileModule {
-    def executePlan(repr: Repr, out: AFile): Backend[AFile]
+    def executePlan(repr: Repr, out: AFile): Backend[Unit]
     def explain(repr: Repr): Backend[String]
     def listContents(dir: ADir): Backend[Set[PathSegment]]
     def fileExists(file: AFile): Configured[Boolean]
@@ -46,7 +46,7 @@ trait ManagedQueryFile[C] { self: BackendModule =>
   object QueryFileModule extends QueryFileModule {
     private final implicit def _MonadM = MonadM
 
-    def executePlan(repr: Repr, out: AFile): Backend[AFile] =
+    def executePlan(repr: Repr, out: AFile): Backend[Unit] =
       ManagedQueryFileModule.executePlan(repr, out)
 
     def explain(repr: Repr): Backend[String] =

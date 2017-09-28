@@ -237,7 +237,7 @@ class MongoDbFileSystemSpec
           }
 
           def check(file: AFile) = {
-            val errP: Prism[FileSystemError \/ AFile, Planner.PlannerError] =
+            val errP: Prism[FileSystemError \/ Unit, Planner.PlannerError] =
               D.left composePrism FileSystemError.qscriptPlanningFailed
 
             val out = renameFile(file, κ(FileName("out")))

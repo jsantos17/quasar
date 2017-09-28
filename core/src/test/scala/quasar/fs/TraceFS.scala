@@ -50,7 +50,7 @@ object TraceFS {
     def apply[A](qf: QueryFile[A]): Trace[A] =
       WriterT.writer((Vector(qf.render),
         qf match {
-          case ExecutePlan(lp, out) => (Vector.empty, \/-(out))
+          case ExecutePlan(lp, out) => (Vector.empty, \/-(()))
           case EvaluatePlan(lp)     => (Vector.empty, \/-(ResultHandle(0)))
           case More(handle)         => \/-(Vector.empty)
           case Close(handle)        => ()

@@ -42,6 +42,13 @@ services:
     ports:
       - "5432:5432"
 
+  quasar_postgres:
+    container_name: quasar_postgres
+    image: postgres:9.6
+    privileged: true
+    ports:
+      - "35432:5432"
+
   quasar_marklogic_xml:
     container_name: quasar_marklogic_xml
     build:

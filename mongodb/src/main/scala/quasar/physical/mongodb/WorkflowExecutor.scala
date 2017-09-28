@@ -127,13 +127,16 @@ private[mongodb] abstract class WorkflowExecutor[F[_]: Monad, C] {
         executeToCursor(defaultDb, foldl, c => findAll(c) map (_.right))
     }
 
-  /** Returns the `Collection` containing the results of executing the given
-    * (crystallized) `Workflow`.
+  /** Execute the given (crystallized) `Workflow` and
+    * write results into the destination `Collection`
     */
-  def execute(workflow: Crystallized[WorkflowF], dst: Collection): M[Collection] =
-    execute0(task(workflow), dst).run(Set()) flatMap { case (tmps, coll) =>
-      (tmps - coll) traverse_ (c => asM(drop(c))) as coll
-    }
+  def execute(workflow: Crystallized[WorkflowF], dst: Collection): M[Unit] =
+    execute0(task(workflow), dst)
+      .flatMap(coll =>
+        asM(aggregate(coll, List(PipelineOp($OutF((), dst.collection).shapePreserving)))
+          .whenM(coll ≠ dst)).liftM[TempsT])
+      .run(Set())
+      .flatMap { case (tmps, _) => tmps traverse_ (c => asM(drop(c))) }
 
   /** Returns a cursor to all the documents in the given collection. */
   protected def findAll(src: Collection): F[C] =

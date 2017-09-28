@@ -150,7 +150,7 @@ sealed class MarkLogic protected (readChunkSize: Positive, writeChunkSize: Posit
   }
 
   object ManagedQueryFileModule extends ManagedQueryFileModule {
-    def executePlan(repr: Repr, out: AFile): Backend[AFile] = {
+    def executePlan(repr: Repr, out: AFile): Backend[Unit] = {
       import MainModule._
 
       def saveResults(mm: MainModule): Backend[MainModule] = {
@@ -176,7 +176,7 @@ sealed class MarkLogic protected (readChunkSize: Positive, writeChunkSize: Posit
         mm  <- saveResults(repr)
         _   <- deleteOutIfExists
         _   <- Xcc[M].execute(mm).liftB
-      } yield out
+      } yield ()
     }
 
     def explain(repr: Repr): Backend[String] =

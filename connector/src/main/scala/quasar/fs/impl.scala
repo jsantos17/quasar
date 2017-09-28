@@ -119,7 +119,7 @@ object impl {
     read[DataStream[F], G](f, s => fToG(dataStreamRead(s)), s => fToG(dataStreamClose(s)))
 
   def queryFile[C, F[_]: Monad](
-    execute: (Fix[LogicalPlan], AFile) => F[(PhaseResults, FileSystemError \/ AFile)],
+    execute: (Fix[LogicalPlan], AFile) => F[(PhaseResults, FileSystemError \/ Unit)],
     evaluate: Fix[LogicalPlan] => F[(PhaseResults, FileSystemError \/ C)],
     more: C => F[FileSystemError \/ (C, Vector[Data])],
     close: C => F[Unit],
@@ -162,7 +162,7 @@ object impl {
   }
 
   def queryFileFromDataCursor[C, F[_]: Monad: Kvs[?[_], QueryFile.ResultHandle, C]: MonoSeq](
-    execute: (Fix[LogicalPlan], AFile) => F[(PhaseResults, FileSystemError \/ AFile)],
+    execute: (Fix[LogicalPlan], AFile) => F[(PhaseResults, FileSystemError \/ Unit)],
     evaluate: Fix[LogicalPlan] => F[(PhaseResults, FileSystemError \/ C)],
     explain: Fix[LogicalPlan] => F[(PhaseResults, FileSystemError \/ ExecutionPlan)],
     listContents: ADir => F[FileSystemError \/ Set[PathSegment]],
@@ -182,9 +182,8 @@ object impl {
   def queryFileFromProcess[
     F[_]: Monad: Catchable,
     G[_]: Monad: Kvs[?[_], QueryFile.ResultHandle, DataStream[F]]: MonoSeq
-  ](
-    fToG: F ~> G,
-    execute: (Fix[LogicalPlan], AFile) => G[(PhaseResults, FileSystemError \/ AFile)],
+  ](fToG: F ~> G,
+    execute: (Fix[LogicalPlan], AFile) => G[(PhaseResults, FileSystemError \/ Unit)],
     evaluate: Fix[LogicalPlan] => G[(PhaseResults, FileSystemError \/ DataStream[F])],
     explain: Fix[LogicalPlan] => G[(PhaseResults, FileSystemError \/ ExecutionPlan)],
     listContents: ADir => G[FileSystemError \/ Set[PathSegment]],

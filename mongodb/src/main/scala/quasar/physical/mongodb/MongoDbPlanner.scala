@@ -65,11 +65,6 @@ final case class There[T[_[_]]](index: Int, next: InputFinder[T])
 object MongoDbPlanner {
   import fixExprOp._
 
-  // FIXME: Move to Matryoshka.
-  def ginterpret[W[_], F[_], A, B](f: A => B, φ: GAlgebra[W, F, B])
-      : GAlgebra[W, CoEnv[A, F, ?], B] =
-    ginterpretM[W, Id, F, A, B](f, φ)
-
   type Partial[T[_[_]], In, Out] = (PartialFunction[List[In], Out], List[InputFinder[T]])
 
   type OutputM[A]      = PlannerError \/ A
@@ -1439,7 +1434,10 @@ object MongoDbPlanner {
       mongoQsOpt <- optimized.transCataM(liftFGM(assumeReadType[M, T, MQS](Type.AnyObject)))
       mongoQs <- elideNops(mongoQsOpt).point[M]
       _ <- BackendModule.logPhase[M](PhaseResult.tree("QScript (Mongo-specific)", mongoQs))
-    } yield mongoQs
+      // TODO: Once field deletion is implemented for 3.4, this could be selectively applied, if necessary.
+      prefPrj = PreferProjection.preferProjection[fs.MongoQScript[T, ?]](mongoQs)
+      _ <- BackendModule.logPhase[M](PhaseResult.tree("QScript (Prefer Projection)", prefPrj))
+    } yield prefPrj
   }
 
   def plan0

@@ -48,7 +48,7 @@ abstract class queryfile {
       v   =  r >>= (Data._obj.getOption(_).foldMap(_.values.toVector))
     } yield v
 
-  def executePlan(repr: Repr, out: AFile): Backend[AFile] =
+  def executePlan(repr: Repr, out: AFile): Backend[Unit] =
     for {
       ctx    <- MR.asks(_.ctx)
       r      <- n1qlResults(repr)
@@ -70,7 +70,7 @@ abstract class queryfile {
                     .toBlocking
                     .last
                 ))).into[Eff].liftB
-    } yield out
+    } yield ()
 
   def evaluatePlan(repr: Repr): Backend[ResultHandle] =
     for {

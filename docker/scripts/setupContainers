@@ -26,6 +26,15 @@ init_metastore() {
   docker exec quasar_metastore /tmp/initPostgresql metastore
 }
 
+init_postgres() {
+  # a restart of the container is needed here due to
+  # http://askubuntu.com/questions/308054/how-to-create-s-pgsql-5432
+  echo "configuring PostgreSQL..."
+  docker restart quasar_postgres
+  docker cp $SCRIPTS_DIR/initTestPostgresql quasar_postgres:/tmp/initTestPostgresql
+  docker exec quasar_postgres /tmp/initTestPostgresql
+}
+
 init_couchbase() {
   echo "configuring couchbase..."
   docker cp $SCRIPTS_DIR/initCouchbase quasar_couchbase:/tmp/initCouchbase
@@ -77,7 +86,7 @@ apply_configuration() {
   if [[ $CONTAINER == "quasar_couchbase"           ]]; then init_couchbase;                              fi
   if [[ $CONTAINER == "quasar_marklogic_xml"       ]]; then init_marklogic $DOCKERIP 8001 8002 enabled;  fi
   if [[ $CONTAINER == "quasar_marklogic_json"      ]]; then init_marklogic $DOCKERIP 9001 9002 disabled; fi
-  if [[ $CONTAINER == "quasar_postgresql"          ]]; then init_postgresql;                             fi
+  if [[ $CONTAINER == "quasar_postgres"            ]]; then init_postgres;                               fi
   if [[ $CONTAINER == "quasar_metastore"           ]]; then init_metastore;                              fi
   if [[ $CONTAINER == "quasar_spark_local_test"    ]]; then init_spark_local;                            fi
   if [[ $CONTAINER == "quasar_spark_cassandra"     ]]; then init_spark_connector $CONTAINER;             fi
@@ -174,6 +183,9 @@ create_database() {
   then
     create_database quasar_spark_cluster
   elif [[ $CONTAINER == "quasar_metastore" ]]
+  then
+    upContainer $CONTAINER
+  elif [[ $CONTAINER == "quasar_postgres" ]]
   then
     upContainer $CONTAINER
   else

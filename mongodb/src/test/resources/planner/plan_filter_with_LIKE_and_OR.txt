@@ -1,0 +1,11 @@
+Chain
+├─ $ReadF(db; foo)
+╰─ $MatchF
+   ╰─ And
+      ├─ Doc
+      │  ╰─ Expr($bar -> Type(Text))
+      ╰─ Or
+         ├─ Doc
+         │  ╰─ Expr($bar -> Regex(^A.*$,false,true,false,false))
+         ╰─ Doc
+            ╰─ Expr($bar -> Regex(^Z.*$,false,true,false,false))

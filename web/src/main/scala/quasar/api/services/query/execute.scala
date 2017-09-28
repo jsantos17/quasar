@@ -98,9 +98,9 @@ object execute {
                   EitherT(fsQ.executeQuery(block, requestVars(req), basePath, out).run.run.run map {
                     case (phases, result) =>
                       result.leftMap(_.toApiError).flatMap(_.leftMap(_.toApiError))
-                        .bimap(_ :+ ("phases" := phases), f => Json(
-                          "out"    := posixCodec.printPath(f),
-                          "phases" := phases))
+                        .bimap(_ :+ ("phases" := phases), κ(Json(
+                          "out"    := posixCodec.printPath(out),
+                          "phases" := phases)))
                   })
               }.run
             })
