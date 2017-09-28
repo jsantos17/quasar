@@ -837,20 +837,17 @@ class PlannerSpec extends
 
     "plan filter with LIKE and OR" in {
       plan(sqlE"""select * from foo where bar like "A%" or bar like "Z%" """) must
-       beWorkflow0(chain[Workflow](
+       beWorkflow(chain[Workflow](
          $read(collection("db", "foo")),
          $match(
-           Selector.Or(
-             Selector.And(
-               Selector.Doc(BsonField.Name("bar") ->
-                 Selector.Type(BsonType.Text)),
-               Selector.Doc(BsonField.Name("bar") ->
-                 Selector.Regex("^A.*$", false, true, false, false))),
-             Selector.And(
-               Selector.Doc(BsonField.Name("bar") ->
-                 Selector.Type(BsonType.Text)),
-               Selector.Doc(BsonField.Name("bar") ->
-                 Selector.Regex("^Z.*$", false, true, false, false)))))))
+           Selector.And(
+             Selector.Doc(
+               BsonField.Name("bar") -> Selector.Type(BsonType.Text)),
+             Selector.Or(
+               Selector.Doc(
+                 BsonField.Name("bar") -> Selector.Regex("^A.*$", false, true, false, false)),
+               Selector.Doc(
+                 BsonField.Name("bar") -> Selector.Regex("^Z.*$", false, true, false, false)))))))
     }
 
     "plan filter with field in constant set" in {
