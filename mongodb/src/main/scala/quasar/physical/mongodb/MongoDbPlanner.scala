@@ -1313,8 +1313,8 @@ object MongoDbPlanner {
   def mapBeforeSort[T[_[_]]: BirecursiveT]: Trans[T] =
     new Trans[T] {
       def trans[F[_], G[_]: Functor]
-        (GtoF: PrismNT[G, F])
-        (implicit QC: QScriptCore[T, ?] :<: F) = {
+          (GtoF: PrismNT[G, F])
+          (implicit QC: QScriptCore[T, ?] :<: F) = {
         case qs @ Map(Embed(src), fm) =>
           GtoF.get(src) >>= QC.prj match {
             case Some(Sort(innerSrc, bucket, order)) =>
@@ -1421,7 +1421,6 @@ object MongoDbPlanner {
 
     val O = new Optimize[T]
     val R = new Rewrite[T]
-
 
     def elideNops: T[MQS] => T[MQS] =
       liftFG(R.elideNopQC[MQS, MQS](reflNT)).dimap(_.project, _.embed)

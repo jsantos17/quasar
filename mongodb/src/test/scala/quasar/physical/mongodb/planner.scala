@@ -943,36 +943,27 @@ class PlannerSpec extends
       plan(sqlE"""select * from a where "foo" ~ pattern or target ~ pattern""") must beWorkflow0(chain[Workflow](
         $read(collection("db", "a")),
         $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"), obj(
-          "__tmp8" -> Call(
+          "0" -> Select(ident("x"), "pattern"),
+          "1" -> Select(ident("x"), "target"),
+          "2" -> Call(
             Select(New(Name("RegExp"), List(Select(ident("x"), "pattern"), jscore.Literal(Js.Str("m")))), "test"),
             List(jscore.Literal(Js.Str("foo")))),
-          "__tmp9" -> ident("x"),
-          "__tmp10" -> Select(ident("x"), "pattern"),
-          "__tmp11" -> Select(ident("x"), "target"),
-          "__tmp12" -> Call(
+          "3" -> Call(
             Select(New(Name("RegExp"), List(Select(ident("x"), "pattern"), jscore.Literal(Js.Str("m")))), "test"),
-            List(Select(ident("x"), "target"))))))),
+            List(Select(ident("x"), "target"))),
+          "src" -> ident("x"))))),
           ListMap()),
         $match(
-          Selector.Or(
-            Selector.And(
-              Selector.Doc(
-                BsonField.Name("__tmp9") \ BsonField.Name("pattern") ->
-                  Selector.Type(BsonType.Text)),
-              Selector.Doc(
-                BsonField.Name("__tmp8") -> Selector.Eq(Bson.Bool(true)))),
-            Selector.And(
-              Selector.Doc(
-                BsonField.Name("__tmp10") -> Selector.Type(BsonType.Text)),
-              Selector.And(
-                Selector.Doc(
-                  BsonField.Name("__tmp11") -> Selector.Type(BsonType.Text)),
-                Selector.Doc(
-                  BsonField.Name("__tmp12") -> Selector.Eq(Bson.Bool(true))))))),
+          Selector.And(
+            Selector.Doc(BsonField.Name("0") -> Selector.Type(BsonType.Text)),
+            Selector.Doc(BsonField.Name("1") -> Selector.Type(BsonType.Text)),
+            Selector.Or(
+              Selector.Doc(BsonField.Name("2") -> Selector.Eq(Bson.Bool(true))),
+              Selector.Doc(BsonField.Name("3") -> Selector.Eq(Bson.Bool(true)))))),
         $project(
-          reshape("value" -> $field("__tmp9")),
+          reshape("value" -> $field("src")),
           ExcludeId)))
-    }.pendingUntilFixed("Actually fixed")
+    }
 
     "plan filter with negate(s)" in {
       plan(sqlE"select * from foo where bar != -10 and baz > -1.0") must
@@ -1279,7 +1270,7 @@ class PlannerSpec extends
                 obj(
                   "pop2"  -> Select(ident("x"), "pop"))))))),
             ListMap())))
-    }.pendingWithActual("Simplify splices", testFile("plan select with wildcard and two fields"))
+    }.pendingWithActual("#2841", testFile("plan select with wildcard and two fields"))
 
     "plan select with wildcard and two constants" in {
       plan(sqlE"""select *, "1", "2" from zips""") must
@@ -1294,7 +1285,7 @@ class PlannerSpec extends
                 obj(
                   "2" -> jscore.Literal(Js.Str("2")))))))),
             ListMap())))
-    }.pendingWithActual("Simplify splices", testFile("plan select with wildcard and two constants"))
+    }.pendingWithActual("#2841", testFile("plan select with wildcard and two constants"))
 
     "plan select with multiple wildcards and fields" in {
       plan(sqlE"select state as state2, *, city as city2, *, pop as pop2 from zips where pop < 1000") must
@@ -1321,7 +1312,7 @@ class PlannerSpec extends
             reshape("value" -> $field("__tmp2")),
             ExcludeId)))
     // "Map issues?. MakeMap in Map's FM"
-    }.pendingWithActual(notOnPar, testFile("plan select with multiple wildcards and fields"))
+    }.pendingWithActual("#2841", testFile("plan select with multiple wildcards and fields"))
 
     "plan sort with wildcard and expression in key" in {
       plan(sqlE"select * from zips order by pop*10 desc") must
@@ -1352,7 +1343,7 @@ class PlannerSpec extends
           $project(
             reshape("value" -> $field("__tmp2")),
             ExcludeId)))
-    }.pendingWithActual("Simplify splices", testFile("plan sort with wildcard and expression in key"))
+    }.pendingWithActual(notOnPar, testFile("plan sort with wildcard and expression in key"))
 
     "plan simple sort with field not in projections" in {
       plan(sqlE"select name from person order by height") must
@@ -1488,7 +1479,7 @@ class PlannerSpec extends
               \/-($literal(Bson.Null))),
             $unwind(DocField("1")))
         }
-    }.pendingWithActual(notOnPar, testFile("plan count and js expr"))
+    }.pendingWithActual("Differing semantics", testFile("plan count and js expr"))
 
     "plan trivial group by" in {
       plan(sqlE"select city from zips group by city") must
