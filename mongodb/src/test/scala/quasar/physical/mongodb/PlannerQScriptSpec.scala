@@ -186,29 +186,28 @@ class PlannerQScriptSpec extends
             List(),
             NonEmptyList((func.ProjectKeyS(func.Hole, "__sd__0"), SortDir.Descending))),
           func.MakeMap(func.Constant(json.str("city")), func.ProjectKeyS(func.Hole, "city")))) must
-      beWorkflow0(
-        chain[Workflow](
-          $read(collection("db", "zips")),
-          $project(
-            reshape(
-              "city"    -> $field("city"),
-              "__sd__0" -> $field("pop")),
-            ExcludeId),
-          $sort(NonEmptyList(
-            BsonField.Name("__sd__0") -> SortDir.Descending)),
-          $group(
-            Grouped.grouped(),
-            -\/(reshape("0" -> $objectLit(ListMap(
-              BsonField.Name("city") -> $field("city")))))),
-          $project(
-            reshape(
-              "city" -> $field("_id", "0", "city")),
-            ExcludeId),
-          $sort(NonEmptyList(
-            BsonField.Name("__sd__0") -> SortDir.Descending)),
-          $project(
-            reshape("city" -> $field("city")),
-            ExcludeId)))
+      beWorkflow0(chain[Workflow](
+        $read(collection("db", "zips")),
+        $project(
+          reshape(
+            "city"    -> $field("city"),
+            "__sd__0" -> $field("pop")),
+          ExcludeId),
+        $sort(NonEmptyList(
+          BsonField.Name("__sd__0") -> SortDir.Descending)),
+        $group(
+          Grouped.grouped(),
+          -\/(reshape("0" -> $objectLit(ListMap(
+            BsonField.Name("city") -> $field("city")))))),
+        $project(
+          reshape(
+            "city" -> $field("_id", "0", "city")),
+          ExcludeId),
+        $sort(NonEmptyList(
+          BsonField.Name("__sd__0") -> SortDir.Descending)),
+        $project(
+          reshape("city" -> $field("city")),
+          ExcludeId)))
     }
 
     "plan sorted Reduce with sort key in Reduce" in {
