@@ -1063,24 +1063,6 @@ class PlannerSpec extends
             ExcludeId)))
     }.pendingWithActual(notOnPar, testFile("plan distinct of expression as expression"))
 
-    "plan distinct of wildcard" in {
-      plan(sqlE"select distinct * from zips") must
-        beWorkflow0(chain[Workflow](
-          $read(collection("db", "zips")),
-          $simpleMap(NonEmptyList(MapExpr(JsFn(Name("x"),
-            obj(
-              "__tmp1" ->
-                Call(ident("remove"),
-                  List(ident("x"), jscore.Literal(Js.Str("_id")))))))),
-            ListMap()),
-          $group(
-            grouped(),
-            -\/(reshape("0" -> $field("__tmp1")))),
-          $project(
-            reshape(sigil.Quasar -> $field("_id", "0")),
-            ExcludeId)))
-    }.pendingWithActual(notOnPar, testFile("plan distinct of wildcard"))
-
     "plan distinct of wildcard as expression" in {
       plan(sqlE"select count(distinct *) from zips") must
         beWorkflow0(chain[Workflow](
