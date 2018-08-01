@@ -21,10 +21,12 @@ import quasar.{Qspec, TreeMatchers, Type}
 import quasar.ejson.{EJson, Fixed}
 import quasar.ejson.implicits._
 import quasar.fp._
+import quasar.fp.ski.κ
 import quasar.contrib.iota._
 import quasar.qscript.{
   construction,
   ExcludeId,
+  IdOnly,
   IncludeId,
   Hole,
   LeftSide,
@@ -547,10 +549,10 @@ object MinimizeAutoJoinsSpec extends Qspec with TreeMatchers with QSUTTypes[Fix]
               "0" -> RightTarget[Fix],
               "1" -> AccessLeftTarget[Fix](Access.valueHole(_))))
 
-          fm.linearize must beTreeEqual(
-            func.Add(
-              func.ProjectKeyS(func.Hole, "0"),
-              func.ProjectKeyS(func.Hole, "1")))
+          fm must beTreeEqual(
+            recFunc.Add(
+              recFunc.ProjectKeyS(recFunc.Hole, "0"),
+              recFunc.ProjectKeyS(recFunc.Hole, "1")))
       }
     }
 
@@ -1535,6 +1537,43 @@ object MinimizeAutoJoinsSpec extends Qspec with TreeMatchers with QSUTTypes[Fix]
               "a" -> func.ProjectKeyS(func.LeftSide, "a"),
               "b" -> func.RightSide,
               "c" -> func.ProjectKeyS(func.LeftSide, "c")))
+      }
+    }
+
+    "shifts keys and values with the same source and struct with a single left shift" in {
+      val shifts = QSUGraph.fromTree[Fix](
+        qsu._autojoin2((
+          qsu.leftShift(
+            shiftedRead,
+            recFunc.ProjectKeyS(recFunc.Hole, "a"),
+            ExcludeId,
+            OnUndefined.Emit,
+            RightTarget[Fix],
+            Rotation.ShiftMap),
+          qsu.leftShift(
+            shiftedRead,
+            recFunc.ProjectKeyS(recFunc.Hole, "a"),
+            IdOnly,
+            OnUndefined.Emit,
+            RightTarget[Fix],
+            Rotation.ShiftMap),
+          func.ConcatMaps(func.LeftSide, func.RightSide))))
+
+      runOn(shifts) must beLike {
+        case LeftShift(
+          g @ LeftShift(Read(_), _, _, _, _, _),
+          struct,
+          IncludeId,
+          OnUndefined.Emit,
+          repair,
+          Rotation.ShiftMap) =>
+
+          struct must beTreeEqual(recFunc.ProjectKeyS(recFunc.Hole, "a"))
+
+          repair must beTreeEqual(
+            func.StaticMapS(
+              "0" -> AccessLeftTarget[Fix](Access.valueHole(_)),
+              "1" -> AccessLeftTarget[Fix](κ(Access.id((IdAccess.identity(g.root), SrcHole))))))
       }
     }
   }
