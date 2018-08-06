@@ -4,6 +4,7 @@
         "lwc_local": "pending",
         "mimir": "pending"
     },
+    "NB": "ch895",
     "data": "../slamengine_commits.data",
     "query": "select count(*) from `../slamengine_commits.data` where commit.message like \"Merge%\"",
     "predicate": "exactly",

@@ -22,6 +22,7 @@ import quasar.{ConditionMatchers, Qspec}
 
 import cats.effect.Sync
 import org.specs2.execute.AsResult
+import org.specs2.specification.BeforeEach
 import org.specs2.specification.core.Fragment
 import scalaz.{~>, \/, \/-, -\/, Equal, Id, Monad, Show}, Id.Id
 import scalaz.syntax.monad._
@@ -29,15 +30,16 @@ import scalaz.std.list._
 
 abstract class TablesSpec[F[_]: Monad: Sync, I: Equal: Show, Q: Equal: Show, D]
     extends Qspec
-    with ConditionMatchers {
+    with ConditionMatchers
+    with BeforeEach {
 
-  import Table._
+  import TableRef._
 
   def tables: Tables[F, I, Q, D]
 
   // `table1` and `table2` must have distinct names
-  val table1: Table[Q]
-  val table2: Table[Q]
+  val table1: TableRef[Q]
+  val table2: TableRef[Q]
 
   val preparation1: D  // preparation for table1
   val preparation2: D  // preparation for table2
@@ -45,6 +47,8 @@ abstract class TablesSpec[F[_]: Monad: Sync, I: Equal: Show, Q: Equal: Show, D]
   val uniqueId: I  // generate a unique value of type `I`
 
   def run: F ~> Id
+
+  def before: Unit
 
   "test data is compliant" >> {
     table1.name must_!= table2.name
@@ -103,17 +107,6 @@ abstract class TablesSpec[F[_]: Monad: Sync, I: Equal: Show, Q: Equal: Show, D]
       } yield {
         result must beLike {
           case -\/(TableError.TableNotFound(i)) => i must_= id
-        }
-      }
-    }
-
-    "fail to cancel preparation for a nonexistent table" >>* {
-      for {
-        id <- uniqueId.point[F]
-        result <- tables.cancelPreparation(id)
-      } yield {
-        result must beAbnormal {
-          TableError.TableNotFound(id)
         }
       }
     }

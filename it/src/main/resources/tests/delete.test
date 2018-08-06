@@ -1,8 +1,8 @@
 {
     "name": "delete",
     "backends": {
-        "lwc_local":         "ignoreFieldOrder",
-        "mimir":"ignoreFieldOrder"
+        "lwc_local": "ignoreFieldOrder",
+        "mimir":     "ignoreFieldOrder"
     },
     "data": "zips.data",
     "query": "delete from `zips.data` where pop < 100000",

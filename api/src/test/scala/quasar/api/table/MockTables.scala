@@ -16,13 +16,12 @@
 
 package quasar.api.table
 
-import slamdata.Predef.{None, Option, Some, String, Unit}
+import slamdata.Predef.{Boolean, None, Some, String, Unit}
 
 import quasar.Condition
 import quasar.contrib.scalaz.MonadState_
 import quasar.contrib.std.uuid._
 
-import java.time.{Duration, OffsetDateTime}
 import java.util.UUID
 
 import fs2.Stream
@@ -35,24 +34,23 @@ final class MockTables[F[_]: Monad: MockTables.TablesMockState]
   extends Tables[F, UUID, String, String] {
 
   import MockTables._
-  import PreparationStatus._
   import TableError._
 
   val store = MonadState_[F, IMap[UUID, MockTable]]
 
-  def allTables: Stream[F, (UUID, Table[String], PreparationStatus)] =
+  def allTables: Stream[F, (UUID, TableRef[String], PreparationStatus)] =
     Stream.force(store.get.map { s =>
       Stream.emits(s.toList.map {
         case (uuid, MockTable(table, status)) => (uuid, table, status)
       }).covary[F]
     })
 
-  def table(tableId: UUID): F[ExistenceError[UUID] \/ Table[String]] =
+  def table(tableId: UUID): F[ExistenceError[UUID] \/ TableRef[String]] =
     store.gets(_.lookup(tableId)
       .map(_.table)
       .toRightDisjunction(TableNotFound(tableId)))
 
-  def createTable(table: Table[String]): F[CreationError \/ UUID] =
+  def createTable(table: TableRef[String]): F[NameConflict \/ UUID] =
     store.get.map { store => 
         (store, store.values.map(_.table.name).contains(table.name))
     } flatMap { case (s, exists) =>
@@ -61,36 +59,25 @@ final class MockTables[F[_]: Monad: MockTables.TablesMockState]
       else
         for {
           id <- UUID.randomUUID.point[F]
-          back <- store.put(s.insert(id, MockTable(table, Unprepared)))
-        } yield id.right[CreationError]
+          back <- store.put(s.insert(id,
+            MockTable(table, PreparationStatus(PreparedStatus.Unprepared, OngoingStatus.NotPreparing))))
+        } yield id.right[NameConflict]
     }
 
-  def replaceTable(tableId: UUID, table: Table[String])
+  def replaceTable(tableId: UUID, table: TableRef[String])
       : F[Condition[ModificationError[UUID]]] =
     store.gets(_.lookup(tableId)).flatMap {
       _.map(_.status match {
-        case Preparing(_, Some(_)) =>
+        case PreparationStatus(PreparedStatus.Prepared, _) =>
           Condition.abnormal[ModificationError[UUID]](
             PreparationExists(tableId)).point[F]
 
-        case Preparing(_, None) =>
+        case PreparationStatus(_, OngoingStatus.Preparing) =>
           Condition.abnormal[ModificationError[UUID]](
             PreparationInProgress(tableId)).point[F]
 
-        case Prepared(_, _) =>
-          Condition.abnormal[ModificationError[UUID]](
-            PreparationExists(tableId)).point[F]
-
-        case Errored(_, _, _, Some(_)) =>
-          Condition.abnormal[ModificationError[UUID]](
-            PreparationExists(tableId)).point[F]
-
-        case Errored(_, _, _, None) =>
-          store.modify(_.insert(tableId, MockTable(table, Unprepared)))
-            .as(Condition.normal[ModificationError[UUID]]())
-
-        case Unprepared =>
-          store.modify(_.insert(tableId, MockTable(table, Unprepared)))
+        case s @ PreparationStatus(PreparedStatus.Unprepared, OngoingStatus.NotPreparing) =>
+          store.modify(_.insert(tableId, MockTable(table, s)))
             .as(Condition.normal[ModificationError[UUID]]())
       }).getOrElse {
         Condition.abnormal[ModificationError[UUID]](
@@ -104,12 +91,16 @@ final class MockTables[F[_]: Monad: MockTables.TablesMockState]
       case Some(state) =>
         store.put {
           stateMap.insert(tableId,
-            MockTable(state.table, Prepared(OffsetDateTime.now(), Duration.ZERO)))
+            MockTable(state.table,
+              PreparationStatus(PreparedStatus.Prepared, OngoingStatus.NotPreparing)))
         }.as(Condition.normal())
       case None =>
         Condition.abnormal(
           TableNotFound(tableId): PrePreparationError[UUID]).point[F]
     })
+
+  def preparationEvents: Stream[F, PreparationEvent[UUID]] =
+    Stream.empty
 
   def preparationStatus(tableId: UUID): F[ExistenceError[UUID] \/ PreparationStatus] =
     store.gets(_.lookup(tableId)
@@ -117,10 +108,8 @@ final class MockTables[F[_]: Monad: MockTables.TablesMockState]
       .toRightDisjunction(TableNotFound(tableId)))
 
   // mock cannot cancel preparations
-  def cancelPreparation(tableId: UUID): F[Condition[ExistenceError[UUID]]] =
-    store.get.map(_.lookup(tableId).fold(
-      Condition.abnormal(TableNotFound(tableId): ExistenceError[UUID]))(
-      _ => Condition.normal()))
+  def cancelPreparation(tableId: UUID): F[Condition[PreparationNotInProgress[UUID]]] =
+    Condition.normal().point[F]
 
   // mock cannot cancel preparations
   def cancelAllPreparations: F[Unit] = ().point[F]
@@ -128,39 +117,23 @@ final class MockTables[F[_]: Monad: MockTables.TablesMockState]
   // the prepared data is the table id
   def preparedData(tableId: UUID): F[ExistenceError[UUID] \/ PreparationResult[UUID, String]] =
     store.gets(_.lookup(tableId).map { s =>
-      isPrepared(s.status) match {
-        case None =>
-          PreparationResult.Unavailable[UUID, String](tableId)
-        case Some(since) =>
-          PreparationResult.Available[UUID, String](tableId, since, tableId.toString)
-      }
+      if (isPrepared(s.status))
+        PreparationResult.Available[UUID, String](tableId, tableId.toString)
+      else
+        PreparationResult.Unavailable[UUID, String](tableId)
     }.toRightDisjunction(TableNotFound(tableId): ExistenceError[UUID]))
 
   ////
 
-  private def isPrepared(status: PreparationStatus): Option[OffsetDateTime] =
+  private def isPrepared(status: PreparationStatus): Boolean =
     status match {
-      case Preparing(_, Some(Prepared(startedAt, duration))) =>
-        Some(calculateFinishTime(startedAt, duration))
-      case Preparing(_, None) =>
-        None
-      case Prepared(startedAt, duration) =>
-        Some(calculateFinishTime(startedAt, duration))
-      case Errored(_, _, _, Some(Prepared(startedAt, duration))) =>
-        Some(calculateFinishTime(startedAt, duration))
-      case Errored(_, _, _, None) =>
-        None
-      case Unprepared =>
-        None
+      case PreparationStatus(PreparedStatus.Prepared, _) => true
+      case _ => false
     }
-
-  private def calculateFinishTime(startedAt: OffsetDateTime, duration: Duration)
-      : OffsetDateTime =
-    startedAt.plus(duration)
 }
 
 object MockTables {
-  final case class MockTable(table: Table[String], status: PreparationStatus)
+  final case class MockTable(table: TableRef[String], status: PreparationStatus)
 
   type TablesMockState[F[_]] = MonadState_[F, IMap[UUID, MockTable]]
 

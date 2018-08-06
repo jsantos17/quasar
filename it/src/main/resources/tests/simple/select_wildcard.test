@@ -8,8 +8,6 @@
   "predicate": "exactly",
   "ignoreResultOrder": true,
 
-  "ignoredFields": ["_id"],
-
   "ignoreFieldOrder": true,
 
   "expected": [

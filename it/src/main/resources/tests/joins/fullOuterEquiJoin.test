@@ -5,8 +5,6 @@
         "mimir": "ignoreFieldOrder"
     },
 
-    "NB": "This passes for mongo locally, but can timeout on travis sporadically.",
-
     "data": ["../cars.data", "../cars2.data"],
 
     "query": "select cars.name as c1, cars2.name as c2

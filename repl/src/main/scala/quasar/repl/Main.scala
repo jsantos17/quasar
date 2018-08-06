@@ -54,21 +54,27 @@ object Main extends StreamApp[PhaseResultCatsT[IO, ?]] {
       _ <- Paths.mkdirs[Stream[F, ?]](pluginDir)
     } yield (dataDir, pluginDir)
 
-  def quasarStream[F[_]: ConcurrentEffect: MonadQuasarErr: PhaseResultTell: Timer]: Stream[F, Quasar[F]] =
+  def quasarStream[F[_]: ConcurrentEffect: MonadQuasarErr: PhaseResultTell: Timer]
+      : Stream[F, Quasar[F]] =
     for {
       (dataPath, pluginPath) <- paths[F]
       precog <- Precog.stream(dataPath.toFile).translate(λ[FunctionK[IO, F]](_.to[F]))
       q <- Quasar[F](precog, ExternalConfig.PluginDirectory(pluginPath), 1000L)
     } yield q
 
-  def repl[F[_]: ConcurrentEffect: MonadQuasarErr: PhaseResultListen: PhaseResultTell](q: Quasar[F]): F[ExitCode] =
+  def repl[F[_]: ConcurrentEffect: MonadQuasarErr: PhaseResultListen: PhaseResultTell](
+      q: Quasar[F])
+      : F[ExitCode] =
     for {
       ref <- Ref[F, ReplState](ReplState.mk)
-      repl <- Repl.mk[F](ref, q.datasources, q.queryEvaluator)
+      repl <- Repl.mk[F](ref,
+        q.datasources,
+        q.queryEvaluator.map(_.flatMap(mimir.tableToData(_).translate(λ[FunctionK[IO, F]](_.to[F])))))
       l <- repl.loop
     } yield l
 
-  override def stream(args: List[String], requestShutdown: IOT[Unit]): Stream[IOT, ExitCode] = {
+  override def stream(args: List[String], requestShutdown: IOT[Unit])
+      : Stream[IOT, ExitCode] = {
     quasarStream[IOT] >>= { q: Quasar[IOT] =>
       Stream.eval(repl(q))
     }

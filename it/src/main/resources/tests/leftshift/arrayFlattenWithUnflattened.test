@@ -2,7 +2,6 @@
   "name": "[qa_s09] array flatten with unflattened side-by-side",
 
   "backends": {
-    "mimir":          "skip"
   },
   "data": "../arrayProcessing.data",
 
@@ -10,12 +9,10 @@
 
   "predicate": "exactly",
 
-  "ignoredFields": ["_id"],
-
   "expected": [
-    {"a":["a","b","c"], "b": "a"},
-    {"a":["a","b","c"], "b": "b"},
-    {"a":["a","b","c"], "b": "c"},
+    {"a": ["a", "b", "c"], "b": "a"},
+    {"a": ["a", "b", "c"], "b": "b"},
+    {"a": ["a", "b", "c"], "b": "c"},
     {"a": ["1", "2", "3"], "b": "1"},
     {"a": ["1", "2", "3"], "b": "2"},
     {"a": ["1", "2", "3"], "b": "3"}

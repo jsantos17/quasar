@@ -218,6 +218,52 @@ public class BitSet {
     }
 
     /**
+     * Inflates the bitset by a factor of `mod` such that
+     * bs.contains(i) == bs.sparsenByMod(o, m).contains(i * m + o)
+     * for all values of bs, i, o, m.
+     */
+    public BitSet sparsenByMod(final int offset, final int mod) {
+        if (mod <= 1) {
+            return copy();
+        }
+
+        long[] _bits = new long[_length * mod];
+
+        int preI = 0;
+        int postI = 0;
+
+        long preC = 1L;
+        long postC = 1L << offset;
+
+        // iterate over our words
+        while (preI < _length) {
+            // in the current word, check if each bit is set
+            if ((bits[preI] & preC) == preC) {
+                // if the bit is set, flip the current sparsened image
+                _bits[postI] ^= postC;
+            }
+
+            // move the post-image forward
+            postC = Long.rotateLeft(postC, mod);
+            if (postC >= 0L && postC < (1L << mod)) {
+                // if we've wrapped around, increment the post-index
+                // note postC may not equal 1L << offset here, since mod might not divide 64
+                postI++;
+            }
+
+            // move the pre-image forward
+            preC = Long.rotateLeft(preC, 1);
+            if (preC == 1L) {
+                // we've wrapped around, increment the pre-index
+                preI++;
+            }
+        }
+
+        // it's just as easy to return a new one as mutate the old
+        return new BitSet(_bits, _bits.length);
+    }
+
+    /**
      * Sets the bit at the index to the opposite value.
      *
      * @param bitIndex the index of the bit.
@@ -253,6 +299,108 @@ public class BitSet {
         bits[j] ^= (1L << toIndex) - 1;
         for (int k = i + 1; k < j; k++) {
             bits[k] ^= -1;
+        }
+    }
+
+    /**
+     * Ensures that all disjoint index mod rings contain at least one
+     * set bit. If a disjoint index mod ring *already* contains a set
+     * bit, then its contents are guaranteed to be left unmodified.
+     * More rigorously, the first invariant is captured by:
+     *
+     * ∀ i . ∃ j >= 0 && j < mod . bits(i + j) == 1
+     */
+    public void setByMod(int mod) {
+        if (mod <= 0) {
+            return;
+        }
+
+        if (mod >= 64) {
+            setByModSlow(mod);
+            return;
+        }
+
+        // we special-case this because it has a much faster implementation (and also our main impl assumes mod > 1)
+        if (mod == 1) {
+            final long replacement = 0xFFFFFFFFFFFFFFFFL;
+            for (int i = 0; i < _length; i++) {
+                bits[i] = replacement;
+            }
+            return;
+        }
+
+        final long initMask = (1L << mod) - 1L;
+
+        long flipper = 1L;
+        long mask = initMask;
+
+        /*
+         * We need a mask which covers the mod - 1 *highest* order bits.
+         * The goal is to use this to find when flipper has landed within
+         * that range, since that would mean that mask would roll over into
+         * the low order. We flip the lowest of these high bits back to 0
+         * since we don't want to catch the case where flipper << mod == 1L.
+         *
+         * When that situation arises, it means mask is split across a long
+         * boundary. We resolve this by splitting the mask and doing two
+         * checks.
+         */
+        final long highOrderCheck = Long.rotateRight(initMask ^ 1L, mod);
+
+        for (int i = 0; i < _length; i++) {
+            do {
+                if ((flipper & highOrderCheck) == 0L) {
+                    if ((bits[i] & mask) == 0L) {
+                        bits[i] |= flipper;
+                    }
+                } else {
+                    int leadingBits = Long.numberOfLeadingZeros(flipper);
+
+                    long highOrderMask = ((1L << (leadingBits + 1)) - 1L) << (64 - leadingBits - 1);         // mask that exactly covers flipper
+                    long lowOrderMask = (1L << (mod - leadingBits)) - 1;  // ...and the rest of the mod bits
+
+                    // NB: make sure we run in production with assertions OFF
+                    assert((Long.toBinaryString(highOrderMask) + Long.toBinaryString(lowOrderMask)).length() == mod);
+
+                    // we've wrapped around and the mask is splitting high/low-order
+
+                    long highBits = mask & highOrderMask;
+
+                    if (i < _length - 1) {
+                        long lowBits = mask & lowOrderMask;
+
+                        // check both current high and next low
+                        if (((bits[i] & highBits) | (bits[i + 1] & lowBits)) == 0L) {
+                            bits[i] |= flipper;
+                        }
+                    } else {
+                        // there is no next. just check current high
+                        if ((bits[i] & highBits) == 0L) {
+                            bits[i] |= flipper;
+                        }
+                    }
+                }
+
+                mask = Long.rotateLeft(mask, mod);
+                flipper = Long.rotateLeft(flipper, mod);
+            } while ((flipper & initMask) == 0L);
+        }
+    }
+
+    private void setByModSlow(int mod) {
+        int bound = _length << 6;
+        for (int i = 0; i < bound / mod; i++) {
+            boolean set = false;
+            for (int j = 0; j < mod && i * mod + j < bound; j++) {
+                if (get(i * mod + j)) {
+                    set = true;
+                    break;
+                }
+            }
+
+            if (!set) {
+                set(i * mod);
+            }
         }
     }
 

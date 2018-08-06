@@ -2,8 +2,6 @@
     "name": "multi-flatten with fields at various depths",
 
     "backends": {
-        "lwc_local":         "pending",
-        "mimir":             "pending"
     },
 
     "data": "nested_foo.data",
@@ -16,10 +14,9 @@
                 foo[*][*].baz[*] LIKE \"%quu%\" OR
                 a                LIKE \"%13%\")",
 
-    "FIXME": "Should use `ignoreResultOrder`, but see issue #732.",
-
     "predicate": "exactly",
     "ignoreFieldOrder": true,
+    "ignoreResultOrder": true,
 
     "expected": [
         { "_id": "5552744bd86735b7268fd002", "a": "13" },

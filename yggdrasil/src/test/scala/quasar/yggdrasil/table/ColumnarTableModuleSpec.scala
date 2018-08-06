@@ -401,6 +401,11 @@ trait ColumnarTableModuleSpec extends TestColumnarTableModule
       }
     }
 
+    // this is separated because of how these specs are structured 🙄
+    "in leftShift (emit on undefined... still)" >> {
+      "shift a homogeneous (but uneven) array with an empty member" in testUnevenHomogeneousArraysEmit
+    }
+
     "in transform" >> {
       "perform the identity transform" in checkTransformLeaf
 

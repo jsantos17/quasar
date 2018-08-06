@@ -12,8 +12,6 @@
 
   "predicate": "exactly",
 
-  "ignoredFields": ["_id"],
-
   "expected": [
     {"musketeer": "d'Artagnan", "favorite_passtime": {"n'ame": "d'arts"}, "equipped": ["cloak", "d'agger"]}
   ]

@@ -18,6 +18,7 @@ package quasar
 package yggdrasil
 package perf
 
+import quasar.contrib.fs2.convert
 import quasar.yggdrasil.table._
 
 import org.openjdk.jmh.infra.Blackhole
@@ -35,6 +36,8 @@ object SliceTools {
     slices.foldLeftRec(IO.unit)((i, o) => i.flatMap(_ => consumeSlice(o, bh))).flatMap(x => x)
 
   def consumeTable(module: TestColumnarTableModule)(table: module.Table, bh: Blackhole): IO[Unit] =
-    consumeSlices(table.slices, bh) // slices.compile.fold(IO.unit)((i, o) => i.flatMap(_ => consumeSlice(o, bh))).flatMap(x => x)
+    consumeSlices(table.slices, bh)
 
+  def consumeTableJson(module: TestColumnarTableModule)(table: module.Table, bh: Blackhole): IO[Unit] =
+    convert.fromStreamT(table.renderJson()).compile.drain
 }

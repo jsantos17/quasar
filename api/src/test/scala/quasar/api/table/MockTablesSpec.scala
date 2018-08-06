@@ -43,8 +43,8 @@ final class MockTablesSpec extends TablesSpec[StateT[IO, Store, ?], UUID, String
   val tables: Tables[StateT[IO, Store, ?], UUID, String, String] =
     MockTables[StateT[IO, Store, ?]]
 
-  val table1: Table[String] = Table(TableName("table1"), "select * from table1")
-  val table2: Table[String] = Table(TableName("table2"), "select * from table2")
+  val table1: TableRef[String] = TableRef(TableName("table1"), "select * from table1")
+  val table2: TableRef[String] = TableRef(TableName("table2"), "select * from table2")
 
   val preparation1: String = table1.query
   val preparation2: String = table2.query
@@ -54,6 +54,8 @@ final class MockTablesSpec extends TablesSpec[StateT[IO, Store, ?], UUID, String
   def run: StateT[IO, Store, ?] ~> Id.Id =
     λ[StateT[IO, Store, ?] ~> Id](
       _.runA(IMap.empty).unsafeRunSync)
+
+  def before: Unit = ()
 }
 
 object MockTablesSpec {

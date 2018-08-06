@@ -149,12 +149,13 @@ object ExternalDatasources extends Logging {
 
       mainJar = new JarFile(plugin.mainJar.toFile)
 
-      backendModuleAttr <-
-        S.delay(Option(
-          mainJar
-            .getManifest
-            .getMainAttributes
-            .getValue(Plugin.ManifestAttributeName)))
+      backendModuleAttr <- jarAttribute[F](mainJar, Plugin.ManifestAttributeName)
+      versionModuleAttr <- jarAttribute[F](mainJar, Plugin.ManifestVersionName)
+
+      _ <- versionModuleAttr match {
+        case None => warnStream[F](s"No '${Plugin.ManifestVersionName}' attribute found in Manifest for '$pluginFile'.", None)
+        case Some(version) => infoStream[F](s"Loading $pluginFile with version $version")
+      }
 
       moduleClasses <- backendModuleAttr match {
         case None =>
@@ -173,6 +174,12 @@ object ExternalDatasources extends Logging {
     } yield mod
   }
 
+  private def jarAttribute[F[_]: Sync](j: JarFile, attr: String): Stream[F, Option[String]] =
+    Sync[Stream[F, ?]].delay(Option(j.getManifest.getMainAttributes.getValue(attr)))
+
   private def warnStream[F[_]: Sync](msg: => String, cause: Option[Throwable]): Stream[F, Nothing] =
     Sync[Stream[F, ?]].delay(cause.fold(log.warn(msg))(log.warn(msg, _))).drain
+
+  private def infoStream[F[_]: Sync](msg: => String): Stream[F, Unit] =
+    Sync[Stream[F, ?]].delay(log.info(msg))
 }

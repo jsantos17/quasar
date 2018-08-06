@@ -16,9 +16,9 @@
 
 package quasar.yggdrasil.nihdb
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.control.NonFatal
 
+import quasar.contrib.cats.effect._
 import quasar.precog.common._
 import quasar.niflheim._
 import quasar.yggdrasil._
@@ -28,6 +28,7 @@ import org.slf4s.Logging
 
 import cats.effect.IO
 
+import scala.concurrent.ExecutionContext
 
 final class NIHDBProjection(snapshot: NIHDBSnapshot, projectionId: Int) extends ProjectionLike[Slice] with Logging {
   type Key = Long
@@ -69,7 +70,9 @@ final class NIHDBProjection(snapshot: NIHDBSnapshot, projectionId: Int) extends 
 }
 
 object NIHDBProjection {
-  def wrap(nihdb: NIHDB): IO[NIHDBProjection] = IO.fromFuture(IO(nihdb.getSnapshot map { snap =>
-    new NIHDBProjection(snap, nihdb.projectionId)
-  }))
+  def wrap(nihdb: NIHDB)(implicit ec: ExecutionContext): IO[NIHDBProjection] = {
+    IO.fromFutureShift(IO(nihdb.getSnapshot map { snap =>
+      new NIHDBProjection(snap, nihdb.projectionId)
+    }))
+  }
 }

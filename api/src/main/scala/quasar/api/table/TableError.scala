@@ -21,8 +21,8 @@ import slamdata.Predef.{Product, Serializable}
 sealed trait TableError extends Product with Serializable
 
 object TableError {
-  sealed trait CreationError extends TableError
-  final case class NameConflict(name: TableName) extends CreationError
+  final case class NameConflict(name: TableName) extends TableError
+  final case class PreparationNotInProgress[I](tableId: I) extends TableError
 
   sealed trait ModificationError[I] extends TableError
   final case class PreparationExists[I](tableId: I) extends ModificationError[I]

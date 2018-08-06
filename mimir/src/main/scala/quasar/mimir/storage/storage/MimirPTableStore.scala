@@ -18,6 +18,7 @@ package quasar.mimir.storage
 
 import slamdata.Predef._
 
+import quasar.contrib.cats.effect._
 import quasar.contrib.fs2.convert._
 import quasar.contrib.pathy.{ADir, AFile}
 import quasar.contrib.scalaz.MonadError_
@@ -39,6 +40,8 @@ import scalaz.syntax.monad._
 
 import shims._
 
+import scala.concurrent.ExecutionContext
+
 /*
  * We don't abstract this because read (and write) use the path-dependent type based on the
  * value of `cake`. It would be nearly impossible to get the types to work out correctly in
@@ -47,7 +50,8 @@ import shims._
 final class MimirPTableStore[F[_]: Monad: LiftIO] private (
     val cake: Cake,
     tablesPrefix: ADir)(
-    implicit ME: MonadError_[F, ResourceError]) {
+    implicit ME: MonadError_[F, ResourceError],
+    ec: ExecutionContext) {
 
   import cake.{Table => PTable}
 
@@ -58,14 +62,14 @@ final class MimirPTableStore[F[_]: Monad: LiftIO] private (
         fromStreamT(table.slices).zipWithIndex evalMap {
           case (slice, offset) =>
             val jvs = slice.toJsonElements
-            IO.fromFuture(IO(db.insertVerified(NIHDB.Batch(offset, jvs.toList) :: Nil)))
+            IO.fromFutureShift(IO(db.insertVerified(NIHDB.Batch(offset, jvs.toList) :: Nil)))
         }
 
       case None =>
         Stream.empty
     }, {
       case Some((blob, version, db)) =>
-        IO.fromFuture(IO(db.cook)) *> cake.commitDB(blob, version, db)
+        IO.fromFutureShift(IO(db.cook)) *> cake.commitDB(blob, version, db)
 
       case None =>
         IO.pure(())
@@ -109,7 +113,8 @@ object MimirPTableStore {
 
   def apply[F[_]: Monad: LiftIO: MonadError_[?[_], ResourceError]](
       cake: Cake,
-      tablesPrefix: ADir)
+      tablesPrefix: ADir)(
+      implicit ec: ExecutionContext)
       : MimirPTableStore[F] =
     new MimirPTableStore[F](cake, tablesPrefix)
 }

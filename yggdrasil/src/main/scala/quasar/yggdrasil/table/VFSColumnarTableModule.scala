@@ -17,6 +17,7 @@
 package quasar.yggdrasil.table
 
 import quasar.blueeyes.json.JValue
+import quasar.contrib.cats.effect._
 import quasar.contrib.pathy.{firstSegmentName, ADir, AFile, APath, PathSegment}
 import quasar.niflheim.NIHDB
 import quasar.precog.common.{Path => PrecogPath}
@@ -48,6 +49,8 @@ import scalaz.syntax.either._
 import scalaz.syntax.monad._
 import scalaz.syntax.traverse._
 
+import scala.concurrent.ExecutionContext
+
 trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging {
   private type ET[F[_], A] = EitherT[F, ResourceError, A]
 
@@ -65,6 +68,8 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
         t
       }
     })
+
+  implicit def ExecutionContext: ExecutionContext
 
   def CookThreshold: Int
   def StorageTimeout: FiniteDuration
@@ -111,7 +116,7 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
                 back <- if (check == null)
                   nihdb.right[ResourceError].point[OptionT[IO, ?]]
                 else
-                  IO.fromFuture(IO(nihdb.close)).liftM[OptionT] >> openDB(path)
+                  IO.fromFutureShift(IO(nihdb.close)).liftM[OptionT] >> openDB(path)
               } yield back
             }
           } yield back.flatMap(x => x)
@@ -156,7 +161,7 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
       blob <- OptionT(vfs.readPath(path))
       head <- OptionT(vfs.headOfBlob(blob))
       db <- OptionT(IO(Option(dbs.get((blob, head)))))
-      _ <- IO.fromFuture(IO(db.close)).liftM[OptionT]
+      _ <- IO.fromFutureShift(IO(db.close)).liftM[OptionT]
       _ <- IO(dbs.remove((blob, head), db)).liftM[OptionT]
     } yield ()
 
@@ -172,7 +177,7 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
       check <- IO(dbs.replace((blob, oldHead), oldDB, db)).liftM[OptionT]
 
       _ <- if (check)
-        IO.fromFuture(IO(oldDB.close)).liftM[OptionT]
+        IO.fromFutureShift(IO(oldDB.close)).liftM[OptionT]
       else
         replaceM
     } yield ()
@@ -201,7 +206,7 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
       actions = ingestion.chunks.zipWithIndex evalMap {
         case (jvs, offset) =>
           // insertVerified forces sequential behavior and backpressure
-          IO.fromFuture(IO(nihdb.insertVerified(NIHDB.Batch(offset, jvs.toList) :: Nil)))
+          IO.fromFutureShift(IO(nihdb.insertVerified(NIHDB.Batch(offset, jvs.toList) :: Nil)))
       }
 
       driver = actions.drain ++ Stream.eval(commitDB(blob, version, nihdb))
@@ -216,7 +221,7 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
       blob <- OptionT(vfs.readPath(path))
       head <- OptionT(vfs.headOfBlob(blob))
       db <- OptionT(IO(Option(dbs.get((blob, head)))))
-      _ <- IO.fromFuture(IO(db.cook)).liftM[OptionT]
+      _ <- IO.fromFutureShift(IO(db.cook)).liftM[OptionT]
     } yield ()
 
     ot.getOrElseF(IO.unit)
@@ -249,7 +254,7 @@ trait VFSColumnarTableModule extends BlockStoreColumnarTableModule with Logging 
               removed <- IO(dbs.remove((blob, version), nihdb)).liftM[OptionT]
 
               _ <- if (removed)
-                IO.fromFuture(IO(nihdb.close)).liftM[OptionT]
+                IO.fromFutureShift(IO(nihdb.close)).liftM[OptionT]
               else
                 ().point[OptionT[IO, ?]]
             } yield ()

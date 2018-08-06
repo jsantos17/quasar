@@ -8,8 +8,6 @@
 
     "data": ["leftData2.data", "rightData.data"],
 
-    "ignoredFields": ["_id"],
-
     "query": "select * from `leftData2.data` as l inner join `rightData.data` as r on l.a = r.a order by l.c, l.a",
 
     "predicate": "exactly",

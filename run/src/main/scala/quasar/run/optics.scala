@@ -17,9 +17,14 @@
 package quasar.run
 
 import slamdata.Predef._
+import quasar.{Variables, VarName, VarValue}
 import quasar.api.datasource._
+import quasar.api.table.{TableName, TableRef}
+import quasar.contrib.pathy.prismADir
 import quasar.fp.numeric.Positive
+import quasar.mimir.storage.StoreKey
 import quasar.precog.common._
+import quasar.sql.Query
 
 import java.util.UUID
 
@@ -33,31 +38,31 @@ import scalaz.syntax.traverse._
 
 object optics {
 
-  val RefTypeField = "type"
-  val RefTypeVersionField = "typeVersion"
-  val RefNameField = "name"
-  val RefConfigField = "config"
+  val DsRefTypeField = "type"
+  val DsRefTypeVersionField = "typeVersion"
+  val DsRefNameField = "name"
+  val DsRefConfigField = "config"
 
   def rValueDatasourceRefP[A](cfgP: Prism[RValue, A]): Prism[RValue, DatasourceRef[A]] = {
     def fromRValue(rv: RValue): Option[DatasourceRef[A]] =
       for {
         kind <-
-          RValue.rField1(RefTypeField)
+          RValue.rField1(DsRefTypeField)
             .composePrism(RValue.rString)
             .getOption(rv)
 
         ver <-
-          RValue.rField1(RefTypeVersionField)
+          RValue.rField1(DsRefTypeVersionField)
             .composePrism(RValue.rNum)
             .getOption(rv)
 
         name <-
-          RValue.rField1(RefNameField)
+          RValue.rField1(DsRefNameField)
             .composePrism(RValue.rString)
             .getOption(rv)
 
         cfg <-
-          RValue.rField1(RefConfigField)
+          RValue.rField1(DsRefConfigField)
             .composePrism(cfgP)
             .getOption(rv)
 
@@ -72,10 +77,78 @@ object optics {
     val toRValue: DatasourceRef[A] => RValue = {
       case DatasourceRef(DatasourceType(t, v), DatasourceName(n), c) =>
         RValue.rObject(Map(
-          RefTypeField -> CString(t.value),
-          RefTypeVersionField -> CNum(v.value),
-          RefNameField -> CString(n),
-          RefConfigField -> cfgP(c)))
+          DsRefTypeField -> CString(t.value),
+          DsRefTypeVersionField -> CNum(v.value),
+          DsRefNameField -> CString(n),
+          DsRefConfigField -> cfgP(c)))
+    }
+
+    Prism(fromRValue)(toRValue)
+  }
+
+  val TableRefNameField = "name"
+  val TableRefQueryField = "query"
+
+  def rValueTableRefP[A](queryP: Prism[RValue, A]): Prism[RValue, TableRef[A]] = {
+    def fromRValue(rv: RValue): Option[TableRef[A]] =
+      for {
+        name <-
+          RValue.rField1(TableRefNameField)
+            .composePrism(RValue.rString)
+            .getOption(rv)
+        query <-
+          RValue.rField1(TableRefQueryField)
+            .composePrism(queryP)
+            .getOption(rv)
+      } yield TableRef(TableName(name), query)
+
+    val toRValue: TableRef[A] => RValue = {
+      case TableRef(TableName(name), query) =>
+        RValue.rObject(Map(
+          TableRefNameField -> CString(name),
+          TableRefQueryField -> queryP(query)))
+    }
+
+    Prism(fromRValue)(toRValue)
+  }
+
+  val SqlQueryQueryField = "query"
+  val SqlQueryVarsField = "vars"
+  val SqlQueryPathField = "path"
+
+  val rValueSqlQueryP: Prism[RValue, SqlQuery] = {
+    def fromRValue(rv: RValue): Option[SqlQuery] =
+      for {
+        query <-
+          RValue.rField1(SqlQueryQueryField)
+            .composePrism(RValue.rString)
+            .getOption(rv)
+        vars0 <-
+          RValue.rField1(SqlQueryVarsField)
+            .composePrism(RValue.rObject)
+            .getOption(rv)
+        vars <- {
+          val opts: List[Option[(VarName, VarValue)]] = vars0.toList.map {
+            case (k, v) => RValue.rString.getOption(v).map(s => (VarName(k), VarValue(s)))
+          }
+          opts.sequence.map(_.toMap)
+        }
+        path <-
+          RValue.rField1(SqlQueryPathField)
+            .composePrism(RValue.rString)
+            .composePrism(prismADir)
+            .getOption(rv)
+      } yield SqlQuery(Query(query), Variables(vars), path)
+
+    val toRValue: SqlQuery => RValue = {
+      case SqlQuery(Query(query), Variables(vars), path) =>
+        RValue.rObject(Map(
+          SqlQueryQueryField -> CString(query),
+          SqlQueryVarsField -> RValue.rObject(
+            vars map {
+              case (VarName(name), VarValue(value)) => (name, CString(value))
+            }),
+          SqlQueryPathField -> RValue.rString.composePrism(prismADir).reverseGet(path)))
     }
 
     Prism(fromRValue)(toRValue)
@@ -121,4 +194,7 @@ object optics {
     Prism[String, UUID](
       s => \/.fromTryCatchNonFatal(UUID.fromString(s)).toOption)(
       u => u.toString)
+
+  val storeKeyUuidP: Prism[StoreKey, UUID] =
+    StoreKey.stringIso composePrism stringUuidP
 }

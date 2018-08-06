@@ -1,0 +1,17 @@
+{
+    "name": "field and shifted array value on very heterogenous maps",
+    "backends": {
+        "lwc_local": "pendingIgnoreFieldOrder",
+        "mimir":     "pendingIgnoreFieldOrder"
+    },
+    "data": "very_heterogeneous_array.data",
+    "query": "select a, b[_] as v from `very_heterogeneous_map.data`",
+    "predicate": "exactly",
+    "ignoreResultOrder": true,
+    "expected": [
+      { "a": 0 },
+      { "a": 1 },
+      { "a": 2 },
+      { "a": 3 }
+    ]
+}

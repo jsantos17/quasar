@@ -590,6 +590,35 @@ abstract class Slice { source =>
     }
   }
 
+  def ifUndefined(default: Slice): Slice = {
+    val defined = {
+      val bsing = source.columns.values map {
+        case col: BitsetColumn => col.definedAt.copy
+        case col => col.definedAt(0, size)
+      }
+
+      val back = bsing.reduceOption(_ | _).getOrElse(new BitSet)
+      back.flip(0, size)
+      back
+    }
+
+    val masked = default.columns lazyMapValues { col =>
+      cf.util.filter(0, size, defined)(col).get
+    }
+
+    val merged = masked.foldLeft(source.columns) {
+      case (acc, (ref, col)) if acc.contains(ref) =>
+        acc.updated(ref, cf.util.UnionRight(col, acc(ref)).get)
+
+      case (acc, pair) => acc + pair
+    }
+
+    new Slice {
+      val size = source.size
+      val columns = merged
+    }
+  }
+
   def compact(filter: Slice, definedness: Definedness): Slice = {
     new Slice {
       private val cols = filter.columns

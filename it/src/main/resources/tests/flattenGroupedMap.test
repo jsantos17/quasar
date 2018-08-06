@@ -4,7 +4,6 @@
         "lwc_local":         "ignoreFieldOrder",
         "mimir":             "ignoreFieldOrder"
     },
-    "NB": "Legacy MongoDB did not have to ignore field order.",
     "data": "slamengine_commits.data",
     "query": "select distinct commit{*}, count(*) from `slamengine_commits.data` where commit{*} like \"http%\" group by committer.login",
     "predicate": "atLeast",

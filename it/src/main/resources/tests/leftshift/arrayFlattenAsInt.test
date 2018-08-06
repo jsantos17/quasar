@@ -1,24 +1,21 @@
 {
-  "name": "[qa_s09] array flatten simple with integer conversion",
+  "name": "[qa_s09] array flatten simple with invalid integer conversion",
 
   "backends": {
-    "lwc_local":      "pending",
-    "mimir":          "pending"
   },
+  
   "data": "../arrayProcessingInts.data",
 
-  "query": "select integer(a[*]) as b from `../arrayProcessingInts.data`",
+  "query": "select 1 as c, integer(a[*]) as b from `../arrayProcessingInts.data`",
 
   "predicate": "exactly",
 
-  "ignoredFields": ["_id"],
-
   "expected": [
-    {"b": 1},
-    {"b": 2},
-    {"b": 3},
-    {"b": 4},
-    {"b": 5},
-    {"b": 6}
+    { "c": 1 },
+    { "c": 1 },
+    { "c": 1 },
+    { "c": 1 },
+    { "c": 1 },
+    { "c": 1 }
   ]
 }

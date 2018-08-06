@@ -601,6 +601,92 @@ class SliceSpec extends Specification with ScalaCheck {
       }
     }
   }
+
+  "ifUndefined" should {
+    "merge homogeneous slices with holes" in {
+      val sourceArray = JParser.parseUnsafe("""[
+        { "a": 1 },
+        { "a": 2 },
+        { "b": "three" },
+        { "a": 4 }
+        ]""")
+
+      val sourceData = sourceArray match {
+        case JArray(rows) => rows.toStream
+        case _ => ???
+      }
+
+      val source = Slice.fromJValues(sourceData).deref(CPathField("a"))
+
+      val defaultArray = JParser.parseUnsafe("""[
+        { "b": "five" },
+        { "a": 3 },
+        { "a": 3 },
+        { "b": "six" }
+        ]""")
+
+      val defaultData = defaultArray match {
+        case JArray(rows) => rows.toStream
+        case _ => ???
+      }
+
+      val default = Slice.fromJValues(defaultData).deref(CPathField("a"))
+
+      val result = source.ifUndefined(default)
+      val values = result.toJsonElements
+
+      val expectedArray = JParser.parseUnsafe("""[1, 2, 3, 4]""")
+
+      val expectedData = expectedArray match {
+        case JArray(rows) => rows.toVector
+        case _ => ???
+      }
+
+      values mustEqual expectedData
+    }
+
+    "merge heterogeneous slices with holes" in {
+      val sourceArray = JParser.parseUnsafe("""[
+        { "a": true },
+        { "a": 2 },
+        { "b": 3 },
+        { "a": null }
+        ]""")
+
+      val sourceData = sourceArray match {
+        case JArray(rows) => rows.toStream
+        case _ => ???
+      }
+
+      val source = Slice.fromJValues(sourceData).deref(CPathField("a"))
+
+      val defaultArray = JParser.parseUnsafe("""[
+        { "b": "five" },
+        { "a": 3 },
+        { "a": "three" },
+        { "b": 6 }
+        ]""")
+
+      val defaultData = defaultArray match {
+        case JArray(rows) => rows.toStream
+        case _ => ???
+      }
+
+      val default = Slice.fromJValues(defaultData).deref(CPathField("a"))
+
+      val result = source.ifUndefined(default)
+      val values = result.toJsonElements
+
+      val expectedArray = JParser.parseUnsafe("""[true, 2, "three", null]""")
+
+      val expectedData = expectedArray match {
+        case JArray(rows) => rows.toVector
+        case _ => ???
+      }
+
+      values mustEqual expectedData
+    }
+  }
 }
 
 

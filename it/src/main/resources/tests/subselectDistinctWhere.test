@@ -4,7 +4,6 @@
     "lwc_local": "ignoreFieldOrder",
     "mimir":     "ignoreFieldOrder"
   },
-  "NB": "pending for mongodb due to MongoDB Error: Command failed with error 13070: 'value too large to reduce'",
   "data": ["demo/patients.data", "zips.data"],
   "query": "SELECT first_name, last_name FROM `demo/patients.data` AS p where state in (SELECT DISTINCT state FROM `zips.data`) ORDER BY last_name, first_name",
   "predicate": "initial",

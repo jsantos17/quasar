@@ -44,6 +44,8 @@ import scalaz.{\/, Id}
 import scalaz.syntax.applicative._
 import scalaz.syntax.either._
 
+import scala.concurrent.ExecutionContext.Implicits.global
+
 import java.nio.file.Files
 
 class MimirStdLibSpec extends StdLibSpec with PrecogCake {

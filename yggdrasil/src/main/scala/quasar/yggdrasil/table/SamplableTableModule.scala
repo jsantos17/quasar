@@ -256,7 +256,7 @@ trait SamplableColumnarTableModule extends SamplableTableModule { self: Columnar
         if (src.isDefinedAt(srcRow)) {
           unsafeInsert(srcRow, destRow)
         } else {
-          dest.defined.clear(destRow)
+          dest.definedAt.clear(destRow)
         }
       }
 
@@ -264,7 +264,7 @@ trait SamplableColumnarTableModule extends SamplableTableModule { self: Columnar
         if (dest.isDefinedAt(from)) {
           unsafeMove(from, to)
         } else {
-          dest.defined.clear(to)
+          dest.definedAt.clear(to)
         }
       }
     }

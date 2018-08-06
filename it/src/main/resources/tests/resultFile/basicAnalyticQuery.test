@@ -4,7 +4,6 @@
         "lwc_local":         "ignoreFieldOrder",
         "mimir":             "ignoreFieldOrder"
     },
-    "NB": "Pending on mongo due to #3176",
     "data": "../zips.data",
     "query": "SELECT state, COUNT(*) AS count, SUM(pop) AS sum, AVG(pop) AS avg, MIN(pop) AS min, MAX(pop) AS max FROM `../zips.data` WHERE pop > 10000 GROUP BY state ORDER BY max DESC, state OFFSET 1 LIMIT 10",
     "predicate": "exactly",

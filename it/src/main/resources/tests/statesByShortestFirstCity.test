@@ -1,10 +1,11 @@
 {
     "name": "states sorted by the length of name of their first city, alphabetically",
     "backends": {
-        "lwc_local":"pendingIgnoreFieldOrder",
-        "mimir":"pendingIgnoreFieldOrder"
+        "lwc_local": "pendingIgnoreFieldOrder",
+        "mimir":     "pendingIgnoreFieldOrder"
     },
-    "description": "combines an aggregate function (min) with a function implemented in JS (length)",
+    "NB": "ch893",
+    "description": "combines an aggregate function (min) with a function",
     "data": "zips.data",
     "query": "select state, min(city) as first, length(min(city)) as len from `zips.data` group by state order by len, first, state limit 5",
     "predicate": "exactly",

@@ -26,7 +26,7 @@ import java.time.{LocalDate, LocalDateTime, LocalTime, OffsetDateTime, OffsetTim
 
 import scala.annotation.tailrec
 
-class BitsetColumn(definedAt: BitSet) {
+class BitsetColumn(val definedAt: BitSet) {
   this: Column =>
   def isDefinedAt(row: Int): Boolean = definedAt(row)
 

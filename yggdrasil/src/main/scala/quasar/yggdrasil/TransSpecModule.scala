@@ -132,6 +132,8 @@ trait TransSpecModule extends FNModule {
 
     case class FilterDefined[+A <: SourceType](source: TransSpec[A], definedFor: TransSpec[A], definedness: Definedness) extends TransSpec[A]
 
+    case class IfUndefined[+A <: SourceType](source: TransSpec[A], default: TransSpec[A]) extends TransSpec[A]
+
     case class Cond[+A <: SourceType](pred: TransSpec[A], left: TransSpec[A], right: TransSpec[A]) extends TransSpec[A]
 
     type TransSpec1 = TransSpec[Source1]
@@ -176,6 +178,8 @@ trait TransSpecModule extends FNModule {
           case trans.Filter(source, pred) => trans.Filter(mapSources(source)(f), mapSources(pred)(f))
           case trans.FilterDefined(source, definedFor, definedness) =>
             trans.FilterDefined(mapSources(source)(f), mapSources(definedFor)(f), definedness)
+
+          case trans.IfUndefined(source, target) => trans.IfUndefined(mapSources(source)(f), mapSources(target)(f))
 
           case Scan(source, scanner)   => Scan(mapSources(source)(f), scanner)
           case MapWith(source, mapper) => MapWith(mapSources(source)(f), mapper)
@@ -227,6 +231,8 @@ trait TransSpecModule extends FNModule {
         case trans.Filter(source, pred) => trans.Filter(deepMap(source)(f), deepMap(pred)(f))
         case trans.FilterDefined(source, definedFor, definedness) =>
           trans.FilterDefined(deepMap(source)(f), deepMap(definedFor)(f), definedness)
+
+        case trans.IfUndefined(source, target) => trans.IfUndefined(deepMap(source)(f), deepMap(target)(f))
 
         case Scan(source, scanner)   => Scan(deepMap(source)(f), scanner)
         case MapWith(source, mapper) => MapWith(deepMap(source)(f), mapper)
@@ -377,6 +383,7 @@ trait TransSpecModule extends FNModule {
             case Cond(p, l, r)           => Cond(normalize(p, undef), normalize(l, undef), normalize(r, undef))
             case Filter(s, t)            => Filter(normalize(s, undef), normalize(t, undef))
             case FilterDefined(s, df, t) => FilterDefined(normalize(s, undef), normalize(df, undef), t)
+            case IfUndefined(s, t)       => IfUndefined(normalize(s, undef), normalize(t, undef))
             case Typed(s, t)             => Typed(normalize(s, undef), t)
             case TypedSubsumes(s, t)     => TypedSubsumes(normalize(s, undef), t)
             case Map1(s, fun)            => Map1(normalize(s, undef), fun)
@@ -449,6 +456,7 @@ trait TransSpecModule extends FNModule {
           case Range(upper, lower)       => paths(upper) ++ paths(lower) + r
           case Filter(f, p)              => paths(f) ++ paths(p) + r
           case FilterDefined(s, p, _)    => paths(s) ++ paths(p) + r
+          case IfUndefined(s, d)         => paths(s) ++ paths(d) + r
           case IsType(s, _)              => paths(s) + r
           case Map1(s, _)                => paths(s) + r
           case Map2(f, s, _)             => paths(f) ++ paths(s) + r

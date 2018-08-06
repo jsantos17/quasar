@@ -18,6 +18,7 @@ package quasar.yggdrasil.table.cf
 
 import quasar.blueeyes._
 import quasar.precog._
+import quasar.precog.common._
 import quasar.yggdrasil._
 import quasar.yggdrasil.table._
 
@@ -31,100 +32,273 @@ object util {
   val UnionRight = CF2P {
     case (c1: BoolColumn, c2: BoolColumn) =>
       new UnionColumn(c1, c2) with BoolColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: LongColumn, c2: LongColumn) =>
       new UnionColumn(c1, c2) with LongColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: DoubleColumn, c2: DoubleColumn) =>
       new UnionColumn(c1, c2) with DoubleColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: NumColumn, c2: NumColumn) =>
       new UnionColumn(c1, c2) with NumColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: StrColumn, c2: StrColumn) =>
       new UnionColumn(c1, c2) with StrColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: OffsetDateTimeColumn, c2: OffsetDateTimeColumn) =>
       new UnionColumn(c1, c2) with OffsetDateTimeColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: OffsetTimeColumn, c2: OffsetTimeColumn) =>
       new UnionColumn(c1, c2) with OffsetTimeColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: OffsetDateColumn, c2: OffsetDateColumn) =>
       new UnionColumn(c1, c2) with OffsetDateColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: LocalDateTimeColumn, c2: LocalDateTimeColumn) =>
       new UnionColumn(c1, c2) with LocalDateTimeColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: LocalTimeColumn, c2: LocalTimeColumn) =>
       new UnionColumn(c1, c2) with LocalTimeColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: LocalDateColumn, c2: LocalDateColumn) =>
       new UnionColumn(c1, c2) with LocalDateColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: IntervalColumn, c2: IntervalColumn) =>
       new UnionColumn(c1, c2) with IntervalColumn {
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: HomogeneousArrayColumn[a], _c2: HomogeneousArrayColumn[_]) if c1.tpe == _c2.tpe =>
       val c2 = _c2.asInstanceOf[HomogeneousArrayColumn[a]]
       new UnionColumn(c1, c2) with HomogeneousArrayColumn[a] {
         val tpe = c1.tpe
-        def apply(row: Int) = {
-          if (c2.isDefinedAt(row)) c2(row) else if (c1.isDefinedAt(row)) c1(row) else sys.error("Attempt to retrieve undefined value for row: " + row)
-        }
+        def apply(row: Int) = if (c2.isDefinedAt(row)) c2(row) else c1(row)
       }
 
     case (c1: EmptyArrayColumn, c2: EmptyArrayColumn)   => new UnionColumn(c1, c2) with EmptyArrayColumn
     case (c1: EmptyObjectColumn, c2: EmptyObjectColumn) => new UnionColumn(c1, c2) with EmptyObjectColumn
     case (c1: NullColumn, c2: NullColumn)               => new UnionColumn(c1, c2) with NullColumn
+  }
+
+  // may be applied to a sparse array; any rows for which the mod column is null will be undefined
+  def ModUnion(tpe: CType, cols0: Array[Column]): Column = tpe match {
+    case CBoolean =>
+      val cols = cols0.map(_.asInstanceOf[BoolColumn])
+      val len = cols.length
+
+      new BoolColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CString =>
+      val cols = cols0.map(_.asInstanceOf[StrColumn])
+      val len = cols.length
+
+      new StrColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CLong =>
+      val cols = cols0.map(_.asInstanceOf[LongColumn])
+      val len = cols.length
+
+      new LongColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CDouble =>
+      val cols = cols0.map(_.asInstanceOf[DoubleColumn])
+      val len = cols.length
+
+      new DoubleColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CNum =>
+      val cols = cols0.map(_.asInstanceOf[NumColumn])
+      val len = cols.length
+
+      new NumColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CEmptyObject =>
+      val cols = cols0.map(_.asInstanceOf[EmptyObjectColumn])
+      val len = cols.length
+
+      new EmptyObjectColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+      }
+
+    case CEmptyArray =>
+      val cols = cols0.map(_.asInstanceOf[EmptyArrayColumn])
+      val len = cols.length
+
+      new EmptyArrayColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+      }
+
+    case CNull =>
+      val cols = cols0.map(_.asInstanceOf[NullColumn])
+      val len = cols.length
+
+      new NullColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+      }
+
+    case COffsetDateTime =>
+      val cols = cols0.map(_.asInstanceOf[OffsetDateTimeColumn])
+      val len = cols.length
+
+      new OffsetDateTimeColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case COffsetTime =>
+      val cols = cols0.map(_.asInstanceOf[OffsetTimeColumn])
+      val len = cols.length
+
+      new OffsetTimeColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case COffsetDate =>
+      val cols = cols0.map(_.asInstanceOf[OffsetDateColumn])
+      val len = cols.length
+
+      new OffsetDateColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CLocalDateTime =>
+      val cols = cols0.map(_.asInstanceOf[LocalDateTimeColumn])
+      val len = cols.length
+
+      new LocalDateTimeColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CLocalTime =>
+      val cols = cols0.map(_.asInstanceOf[LocalTimeColumn])
+      val len = cols.length
+
+      new LocalTimeColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CLocalDate =>
+      val cols = cols0.map(_.asInstanceOf[LocalDateColumn])
+      val len = cols.length
+
+      new LocalDateColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+    case CInterval =>
+      val cols = cols0.map(_.asInstanceOf[IntervalColumn])
+      val len = cols.length
+
+      new IntervalColumn {
+        def isDefinedAt(row: Int) = {
+          val col = cols(row % len)
+          col != null && col.isDefinedAt(row / len)
+        }
+
+        def apply(row: Int) = cols(row % len)(row / len)
+      }
+
+
+    case CUndefined => ???
+    case CArrayType(_) => ???
   }
 
   case object NConcat {
@@ -560,6 +734,30 @@ object util {
     case c: EmptyArrayColumn  => new BitsetColumn(definedAt & c.definedAt(from, to)) with EmptyArrayColumn
     case c: EmptyObjectColumn => new BitsetColumn(definedAt & c.definedAt(from, to)) with EmptyObjectColumn
     case c: NullColumn        => new BitsetColumn(definedAt & c.definedAt(from, to)) with NullColumn
+  }
+
+  // a variant of filter which overrides existing definedness checks
+  def filterExclusive(definedAt: BitSet) = CF1P {
+    case c: BoolColumn           => new BitsetColumn(definedAt) with BoolColumn { def apply(row: Int)           = c(row) }
+    case c: LongColumn           => new BitsetColumn(definedAt) with LongColumn { def apply(row: Int)           = c(row) }
+    case c: DoubleColumn         => new BitsetColumn(definedAt) with DoubleColumn { def apply(row: Int)         = c(row) }
+    case c: NumColumn            => new BitsetColumn(definedAt) with NumColumn { def apply(row: Int)            = c(row) }
+    case c: StrColumn            => new BitsetColumn(definedAt) with StrColumn { def apply(row: Int)            = c(row) }
+    case c: OffsetDateTimeColumn => new BitsetColumn(definedAt) with OffsetDateTimeColumn { def apply(row: Int) = c(row) }
+    case c: OffsetTimeColumn     => new BitsetColumn(definedAt) with OffsetTimeColumn { def apply(row: Int)     = c(row) }
+    case c: OffsetDateColumn     => new BitsetColumn(definedAt) with OffsetDateColumn { def apply(row: Int)     = c(row) }
+    case c: LocalDateTimeColumn  => new BitsetColumn(definedAt) with LocalDateTimeColumn { def apply(row: Int)  = c(row) }
+    case c: LocalTimeColumn      => new BitsetColumn(definedAt) with LocalTimeColumn { def apply(row: Int)      = c(row) }
+    case c: LocalDateColumn      => new BitsetColumn(definedAt) with LocalDateColumn { def apply(row: Int)      = c(row) }
+    case c: IntervalColumn => new BitsetColumn(definedAt) with IntervalColumn { def apply(row: Int)             = c(row) }
+    case c: HomogeneousArrayColumn[a] =>
+      new BitsetColumn(definedAt) with HomogeneousArrayColumn[a] {
+        val tpe = c.tpe
+        def apply(row: Int) = c(row)
+      }
+    case c: EmptyArrayColumn  => new BitsetColumn(definedAt) with EmptyArrayColumn
+    case c: EmptyObjectColumn => new BitsetColumn(definedAt) with EmptyObjectColumn
+    case c: NullColumn        => new BitsetColumn(definedAt) with NullColumn
   }
 
   def filterBy(p: Int => Boolean) = CF1P {

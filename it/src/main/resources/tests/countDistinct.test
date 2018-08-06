@@ -1,9 +1,9 @@
 {
     "name": "count distinct",
 
-    "data": "olympics.data",
+    "data": "demo/olympics.data",
 
-    "query": "select count(distinct sport) as cnt from `olympics.data`",
+    "query": "select count(distinct sport) as cnt from `demo/olympics.data`",
 
     "predicate": "exactly",
     "ignoreResultOrder": true,

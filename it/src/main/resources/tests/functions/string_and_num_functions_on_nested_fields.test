@@ -14,8 +14,6 @@
   "predicate": "exactly",
   "ignoreResultOrder": false,
 
-  "ignoredFields": [],
-
   "ignoreFieldOrder": true,
 
   "expected": [

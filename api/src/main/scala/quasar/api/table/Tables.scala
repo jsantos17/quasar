@@ -28,21 +28,29 @@ import scalaz.\/
   * @tparam D materialized table data
   */
 trait Tables[F[_], I, Q, D] {
-  import TableError.{CreationError, ExistenceError, ModificationError, PrePreparationError}
+  import TableError.{
+    ExistenceError,
+    ModificationError,
+    NameConflict,
+    PreparationNotInProgress,
+    PrePreparationError
+  }
 
-  def allTables: Stream[F, (I, Table[Q], PreparationStatus)]
+  def allTables: Stream[F, (I, TableRef[Q], PreparationStatus)]
 
-  def table(tableId: I): F[ExistenceError[I] \/ Table[Q]]
+  def table(tableId: I): F[ExistenceError[I] \/ TableRef[Q]]
 
-  def createTable(table: Table[Q]): F[CreationError \/ I]
+  def createTable(table: TableRef[Q]): F[NameConflict \/ I]
 
-  def replaceTable(tableId: I, table: Table[Q]): F[Condition[ModificationError[I]]]
+  def replaceTable(tableId: I, table: TableRef[Q]): F[Condition[ModificationError[I]]]
 
   def prepareTable(tableId: I): F[Condition[PrePreparationError[I]]]
 
+  def preparationEvents: Stream[F, PreparationEvent[I]]
+
   def preparationStatus(tableId: I): F[ExistenceError[I] \/ PreparationStatus]
 
-  def cancelPreparation(tableId: I): F[Condition[ExistenceError[I]]]
+  def cancelPreparation(tableId: I): F[Condition[PreparationNotInProgress[I]]]
 
   def cancelAllPreparations: F[Unit]
 

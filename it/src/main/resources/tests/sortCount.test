@@ -1,9 +1,9 @@
 {
     "name": "sort of a single value reduction",
 
-    "data": "olympics.data",
+    "data": "demo/olympics.data",
 
-    "query": "select count(*) as cnt from `olympics.data` order by cnt",
+    "query": "select count(*) as cnt from `demo/olympics.data` order by cnt",
 
     "predicate": "exactly",
 

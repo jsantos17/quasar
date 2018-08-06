@@ -23,6 +23,7 @@ import java.io.{File => JFile}
 import java.net.{URLDecoder, URLEncoder}
 
 import argonaut._
+import monocle.Prism
 import _root_.pathy.Path, Path._
 import _root_.pathy.argonaut._
 import _root_.scalaz._, Scalaz._
@@ -117,6 +118,11 @@ package object pathy {
 
     PathCodec('/', escapeRel, uriDecodeUtf8)
   }
+
+  val prismADir: Prism[String, ADir] =
+    Prism.apply[String, ADir](
+      UriPathCodec.parseAbsDir(_).map(unsafeSandboxAbs))(
+      UriPathCodec.printPath(_))
 
   /** Rebases absolute paths onto the provided absolute directory, so
     * `rebaseA(/baz)(/foo/bar)` becomes `/baz/foo/bar`.

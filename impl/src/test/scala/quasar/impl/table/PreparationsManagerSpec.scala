@@ -26,6 +26,7 @@ import fs2.async.mutable.Signal
 import org.specs2.mutable._
 
 import quasar.Condition
+import quasar.api.table.PreparationEvent
 
 import scalaz.std.anyVal._
 import scalaz.std.string._
@@ -62,7 +63,7 @@ object PreparationsManagerSpec extends Specification {
 
         _ <- Stream.eval(IO {
           event must beLike {
-            case TableEvent.PreparationSucceeded(id, _, _) =>
+            case PreparationEvent.PreparationSucceeded(id, _, _) =>
               // TODO assertions about time?
               id mustEqual Id
           }
@@ -153,7 +154,7 @@ object PreparationsManagerSpec extends Specification {
       val event = results.compile.last.unsafeRunSync
 
       event must beLike {
-        case Some(TableEvent.PreparationErrored(_, _, _, TestException)) => ok
+        case Some(PreparationEvent.PreparationErrored(_, _, _, TestException)) => ok
       }
     }
 
@@ -350,11 +351,11 @@ object PreparationsManagerSpec extends Specification {
     s.discrete.filter(_ == true).take(1).compile.drain
 
   def rethrowInStream(
-      events: Stream[IO, TableEvent[String]])
-      : Stream[IO, TableEvent[String]] = {
+      events: Stream[IO, PreparationEvent[String]])
+      : Stream[IO, PreparationEvent[String]] = {
 
     events flatMap {
-      case TableEvent.PreparationErrored(_, _, _, t) =>
+      case PreparationEvent.PreparationErrored(_, _, _, t) =>
         Stream.raiseError(t)
 
       case event =>

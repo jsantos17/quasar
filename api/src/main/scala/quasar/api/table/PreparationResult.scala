@@ -16,12 +16,11 @@
 
 package quasar.api.table
 
-import java.time.OffsetDateTime
 import slamdata.Predef.{Product, Serializable}
 
 sealed trait PreparationResult[I, A] extends Product with Serializable
 
 object PreparationResult {
-  final case class Available[I, A](tableId: I, since: OffsetDateTime, value: A) extends PreparationResult[I, A]
+  final case class Available[I, A](tableId: I, value: A) extends PreparationResult[I, A]
   final case class Unavailable[I, A](tableId: I) extends PreparationResult[I, A]
 }

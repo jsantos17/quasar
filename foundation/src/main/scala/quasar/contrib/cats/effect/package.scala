@@ -16,16 +16,26 @@
 
 package quasar.contrib.cats
 
+import slamdata.Predef.AnyVal
+
 import cats.effect._
+import cats.syntax.functor._
+
+import scala.concurrent.Future
 
 package object effect {
 
-  implicit class toOps[F[_], A](fa: F[A]) {
+  implicit class toOps[F[_], A](val fa: F[A]) extends AnyVal {
     def to[G[_]](implicit F: Effect[F], G: Async[G]): G[A] =
       Async[G].async { l =>
         Effect[F].runAsync(fa)(c =>
           IO(l(c))
         ).unsafeRunSync
       }
+  }
+
+  implicit class IOOps(val self: IO.type) extends AnyVal {
+    def fromFutureShift[A](iofa: IO[Future[A]])(implicit T: Timer[IO]): IO[A] =
+      IO.fromFuture(iofa).flatMap(a => IO.shift.as(a))
   }
 }

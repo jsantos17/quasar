@@ -5,7 +5,7 @@
         "lwc_local": "pendingIgnoreFieldOrder",
         "mimir": "pendingIgnoreFieldOrder"
     },
-
+    "NB": "ch891",
     "data": "smallZips.data",
 
     "query": "select city, array_length(loc, 1) as loc_length, length(city) as city_length from `smallZips.data`",

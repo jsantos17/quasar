@@ -7,7 +7,6 @@
   "predicate": "exactly",
   "ignoreResultOrder": true,
   "ignoreFieldOrder": true,
-  "ignoredFields": ["_id"],
   "expected": [
      {"a": 1, "c": 2},
      {"a": 2, "c": 4},

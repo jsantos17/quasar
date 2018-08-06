@@ -771,6 +771,12 @@ trait SliceTransforms extends TableModule with ColumnarTableTypes with ObjectCon
             s1.filterDefined(s2, definedness)
           }
 
+        case IfUndefined(source, default) =>
+          val sourceTransform = composeSliceTransform2(source)
+          val defaultTransform = composeSliceTransform2(default)
+
+          sourceTransform.zip(defaultTransform)(_.ifUndefined(_))
+
         case Cond(pred, left, right) => {
           val predTransform  = composeSliceTransform2(pred)
           val leftTransform  = composeSliceTransform2(left)

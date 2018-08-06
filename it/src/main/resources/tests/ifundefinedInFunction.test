@@ -9,7 +9,6 @@
 
     "query": "SELECT MAP_CONCAT(DELETE_KEY(t0, \"b\"), t0 ?? {}) FROM `flattenable.data` AS t0",
 
-    "ignoredFields": ["_id"],
     "predicate": "exactly",
     "ignoreResultOrder": true,
 

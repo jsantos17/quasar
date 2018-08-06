@@ -6,13 +6,13 @@
         "mimir": "ignoreFieldOrder"
     },
 
-    "data": "olympics.data",
+    "data": "demo/olympics.data",
 
     "query": "select sum(ct) as measure,
                 country as category,
                 null as stack,
                 null as parallel from
-              (select count(*) as ct, country from `olympics.data` group by country) as src
+              (select count(*) as ct, country from `demo/olympics.data` group by country) as src
               group by country
               order by country asc",
 

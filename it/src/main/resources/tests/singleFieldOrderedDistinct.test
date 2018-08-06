@@ -2,13 +2,13 @@
     "name": "distinct of one ordered field",
     "backends": {
     },
-    "data": "olympics.data",
+    "data": "demo/olympics.data",
 
     "NB": "The lack of alias on this field is important, as it triggers the
            `select value` semantics of returning a value directly, not wrapped
            in a map.",
 
-    "query": "select distinct discipline from `olympics.data` order by discipline",
+    "query": "select distinct discipline from `demo/olympics.data` order by discipline",
     "predicate": "exactly",
     "expected": ["Alpine Skiing",
                  "Biathlon",

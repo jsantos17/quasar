@@ -1,8 +1,8 @@
 {
-    "name": "expressions with `= null` and `is null`, with missing fields (pending #465)",
+    "name": "expressions with `= null` and `is null`, with missing fields",
     "backends": {
-        "lwc_local":         "pendingIgnoreFieldOrder",
-        "mimir":             "pendingIgnoreFieldOrder"
+        "lwc_local": "ignoreFieldOrder",
+        "mimir":     "ignoreFieldOrder"
     },
     "data": "nullsWithMissing.data",
     "query": "select name,
@@ -12,8 +12,8 @@
     "predicate": "exactly",
     "ignoreResultOrder": true,
     "expected": [
-        { "name": "missing parent",              "2": true,  "3": true,  "4": false,               "6": true,  "7": true,  "8": false },
-        { "name": "missing",                     "2": true,  "3": true,  "4": false,               "6": true,  "7": true,  "8": false },
+        { "name": "missing parent" },
+        { "name": "missing" },
         { "name": "null",           "val": null, "2": true,  "3": true,  "4": false, "nval": null, "6": true,  "7": true,  "8": false },
         { "name": "empty",          "val": {},   "2": false, "3": false, "4": true,  "nval": {},   "6": false, "7": false, "8": true  },
         { "name": "one",            "val": 1,    "2": false, "3": false, "4": true,  "nval": 1,    "6": false, "7": false, "8": true  }]

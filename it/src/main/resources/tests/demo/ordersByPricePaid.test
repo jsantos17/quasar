@@ -5,7 +5,6 @@
         "lwc_local":         "ignoreFieldOrder",
         "mimir":             "ignoreFieldOrder"
     },
-    "NB2": "mongo skipped due to timeout",
     "query": "
       select
               o.order_key as OrderKey

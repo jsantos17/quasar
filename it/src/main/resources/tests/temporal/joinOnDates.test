@@ -5,6 +5,7 @@
         "lwc_local": "pending",
         "mimir": "pending"
     },
+    "NB": "ch914",
     "data":  ["../slamengine_commits.data", "../slamengine_commits_dup.data"],
 
     "query": "select a.commit.committer.name as name, b.commit.committer.name as namedup

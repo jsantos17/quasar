@@ -8,8 +8,6 @@
 
   "predicate": "exactly",
 
-  "ignoredFields": ["_id"],
-
   "expected": [
     {"a": ["1", "2", "3"]}
   ]

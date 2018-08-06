@@ -1,6 +1,5 @@
 {
     "name": "use type_of function",
-    "NB": "Expected results not verified for any connector.",
     "backends": {
         "lwc_local": "ignoreFieldOrder",
         "mimir":     "pendingIgnoreFieldOrder"

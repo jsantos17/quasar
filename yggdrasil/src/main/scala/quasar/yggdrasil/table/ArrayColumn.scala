@@ -26,12 +26,7 @@ import java.time.{LocalDate, LocalDateTime, LocalTime, OffsetDateTime, OffsetTim
 import scala.reflect.ClassTag
 import scala.specialized
 
-trait DefinedAtIndex {
-  private[table] val defined: BitSet
-  def isDefinedAt(row: Int) = defined(row)
-}
-
-trait ArrayColumn[@specialized(Boolean, Long, Double) A] extends DefinedAtIndex with ExtensibleColumn {
+trait ArrayColumn[@specialized(Boolean, Long, Double) A] extends BitsetColumn with ExtensibleColumn {
   def update(row: Int, value: A): Unit
   def clear(row: Int): Unit
   def resize(size: Int): ArrayColumn[A]
@@ -46,7 +41,8 @@ object ArrayColumn {
 }
 
 class ArrayHomogeneousArrayColumn[@specialized(Boolean, Long, Double) A](val defined: BitSet, val values: Array[Array[A]])(implicit val tpe: CArrayType[A])
-    extends HomogeneousArrayColumn[A]
+    extends BitsetColumn(defined)
+    with HomogeneousArrayColumn[A]
     with ArrayColumn[Array[A]] {
 
   def apply(row: Int) = values(row)
@@ -82,7 +78,7 @@ object ArrayHomogeneousArrayColumn {
   }
 }
 
-class ArrayBoolColumn(val defined: BitSet, val values: BitSet) extends ArrayColumn[Boolean] with BoolColumn {
+class ArrayBoolColumn(val defined: BitSet, val values: BitSet) extends BitsetColumn(defined) with ArrayColumn[Boolean] with BoolColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: Boolean) = {
@@ -115,7 +111,7 @@ object ArrayBoolColumn {
     new ArrayBoolColumn(new BitSet(size), new BitSet(size))
 }
 
-class ArrayLongColumn(val defined: BitSet, val values: Array[Long]) extends ArrayColumn[Long] with LongColumn {
+class ArrayLongColumn(val defined: BitSet, val values: Array[Long]) extends BitsetColumn(defined) with ArrayColumn[Long] with LongColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: Long) = {
@@ -142,7 +138,7 @@ object ArrayLongColumn {
     new ArrayLongColumn(new BitSet, new Array[Long](size))
 }
 
-class ArrayDoubleColumn(val defined: BitSet, val values: Array[Double]) extends ArrayColumn[Double] with DoubleColumn {
+class ArrayDoubleColumn(val defined: BitSet, val values: Array[Double]) extends BitsetColumn(defined) with ArrayColumn[Double] with DoubleColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: Double) = {
@@ -169,7 +165,7 @@ object ArrayDoubleColumn {
     new ArrayDoubleColumn(new BitSet, new Array[Double](size))
 }
 
-class ArrayNumColumn(val defined: BitSet, val values: Array[BigDecimal]) extends ArrayColumn[BigDecimal] with NumColumn {
+class ArrayNumColumn(val defined: BitSet, val values: Array[BigDecimal]) extends BitsetColumn(defined) with ArrayColumn[BigDecimal] with NumColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: BigDecimal) = {
@@ -196,7 +192,7 @@ object ArrayNumColumn {
     new ArrayNumColumn(new BitSet, new Array[BigDecimal](size))
 }
 
-class ArrayStrColumn(val defined: BitSet, val values: Array[String]) extends ArrayColumn[String] with StrColumn {
+class ArrayStrColumn(val defined: BitSet, val values: Array[String]) extends BitsetColumn(defined) with ArrayColumn[String] with StrColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: String) = {
@@ -223,7 +219,7 @@ object ArrayStrColumn {
     new ArrayStrColumn(new BitSet, new Array[String](size))
 }
 
-class ArrayOffsetDateTimeColumn(val defined: BitSet, val values: Array[OffsetDateTime]) extends ArrayColumn[OffsetDateTime] with OffsetDateTimeColumn {
+class ArrayOffsetDateTimeColumn(val defined: BitSet, val values: Array[OffsetDateTime]) extends BitsetColumn(defined) with ArrayColumn[OffsetDateTime] with OffsetDateTimeColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: OffsetDateTime) = {
@@ -250,7 +246,7 @@ object ArrayOffsetDateTimeColumn {
     new ArrayOffsetDateTimeColumn(new BitSet, new Array[OffsetDateTime](size))
 }
 
-class ArrayOffsetTimeColumn(val defined: BitSet, val values: Array[OffsetTime]) extends ArrayColumn[OffsetTime] with OffsetTimeColumn {
+class ArrayOffsetTimeColumn(val defined: BitSet, val values: Array[OffsetTime]) extends BitsetColumn(defined) with ArrayColumn[OffsetTime] with OffsetTimeColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: OffsetTime) = {
@@ -277,7 +273,7 @@ object ArrayOffsetTimeColumn {
     new ArrayOffsetTimeColumn(new BitSet, new Array[OffsetTime](size))
 }
 
-class ArrayOffsetDateColumn(val defined: BitSet, val values: Array[OffsetDate]) extends ArrayColumn[OffsetDate] with OffsetDateColumn {
+class ArrayOffsetDateColumn(val defined: BitSet, val values: Array[OffsetDate]) extends BitsetColumn(defined) with ArrayColumn[OffsetDate] with OffsetDateColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: OffsetDate) = {
@@ -304,7 +300,7 @@ object ArrayOffsetDateColumn {
     new ArrayOffsetDateColumn(new BitSet, new Array[OffsetDate](size))
 }
 
-class ArrayLocalDateTimeColumn(val defined: BitSet, val values: Array[LocalDateTime]) extends ArrayColumn[LocalDateTime] with LocalDateTimeColumn {
+class ArrayLocalDateTimeColumn(val defined: BitSet, val values: Array[LocalDateTime]) extends BitsetColumn(defined) with ArrayColumn[LocalDateTime] with LocalDateTimeColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: LocalDateTime) = {
@@ -331,7 +327,7 @@ object ArrayLocalDateTimeColumn {
     new ArrayLocalDateTimeColumn(new BitSet, new Array[LocalDateTime](size))
 }
 
-class ArrayLocalTimeColumn(val defined: BitSet, val values: Array[LocalTime]) extends ArrayColumn[LocalTime] with LocalTimeColumn {
+class ArrayLocalTimeColumn(val defined: BitSet, val values: Array[LocalTime]) extends BitsetColumn(defined) with ArrayColumn[LocalTime] with LocalTimeColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: LocalTime) = {
@@ -358,7 +354,7 @@ object ArrayLocalTimeColumn {
     new ArrayLocalTimeColumn(new BitSet, new Array[LocalTime](size))
 }
 
-class ArrayLocalDateColumn(val defined: BitSet, val values: Array[LocalDate]) extends ArrayColumn[LocalDate] with LocalDateColumn {
+class ArrayLocalDateColumn(val defined: BitSet, val values: Array[LocalDate]) extends BitsetColumn(defined) with ArrayColumn[LocalDate] with LocalDateColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: LocalDate) = {
@@ -385,7 +381,7 @@ object ArrayLocalDateColumn {
     new ArrayLocalDateColumn(new BitSet, new Array[LocalDate](size))
 }
 
-class ArrayIntervalColumn(val defined: BitSet, val values: Array[DateTimeInterval]) extends ArrayColumn[DateTimeInterval] with IntervalColumn {
+class ArrayIntervalColumn(val defined: BitSet, val values: Array[DateTimeInterval]) extends BitsetColumn(defined) with ArrayColumn[DateTimeInterval] with IntervalColumn {
   def apply(row: Int) = values(row)
 
   def update(row: Int, value: DateTimeInterval) = {
@@ -412,7 +408,7 @@ object ArrayIntervalColumn {
     new ArrayIntervalColumn(new BitSet, new Array[DateTimeInterval](size))
 }
 
-class MutableEmptyArrayColumn(val defined: BitSet) extends ArrayColumn[Boolean] with EmptyArrayColumn {
+class MutableEmptyArrayColumn(val defined: BitSet) extends BitsetColumn(defined) with ArrayColumn[Boolean] with EmptyArrayColumn {
   def update(row: Int, value: Boolean) = {
     if (value) defined.set(row) else defined.clear(row)
   }
@@ -429,7 +425,7 @@ object MutableEmptyArrayColumn {
   def empty(): MutableEmptyArrayColumn = new MutableEmptyArrayColumn(new BitSet)
 }
 
-class MutableEmptyObjectColumn(val defined: BitSet) extends ArrayColumn[Boolean] with EmptyObjectColumn {
+class MutableEmptyObjectColumn(val defined: BitSet) extends BitsetColumn(defined) with ArrayColumn[Boolean] with EmptyObjectColumn {
   def update(row: Int, value: Boolean) = {
     if (value) defined.set(row) else defined.clear(row)
   }
@@ -446,7 +442,7 @@ object MutableEmptyObjectColumn {
   def empty(): MutableEmptyObjectColumn = new MutableEmptyObjectColumn(new BitSet)
 }
 
-class MutableNullColumn(val defined: BitSet) extends ArrayColumn[Boolean] with NullColumn {
+class MutableNullColumn(val defined: BitSet) extends BitsetColumn(defined) with ArrayColumn[Boolean] with NullColumn {
   def update(row: Int, value: Boolean) = {
     if (value) defined.set(row) else defined.clear(row)
   }

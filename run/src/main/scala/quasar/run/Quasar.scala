@@ -16,12 +16,12 @@
 
 package quasar.run
 
-import slamdata.Predef.Double
+import slamdata.Predef.{Array, Double, SuppressWarnings}
 
 import quasar.api.QueryEvaluator
 import quasar.api.datasource.{DatasourceRef, Datasources}
+import quasar.api.table.Tables
 import quasar.common.PhaseResultTell
-import quasar.common.data.Data
 import quasar.contrib.pathy.ADir
 import quasar.contrib.std.uuid._
 import quasar.ejson.EJson
@@ -32,9 +32,10 @@ import quasar.impl.datasources.{DatasourceManagement, DefaultDatasources}
 import quasar.impl.evaluate.FederatingQueryEvaluator
 import quasar.impl.external.{ExternalConfig, ExternalDatasources}
 import quasar.impl.schema.SstConfig
-import quasar.mimir.Precog
+import quasar.impl.table.{DefaultTables, PreparationsManager}
+import quasar.mimir.{MimirRepr, Precog}
 import quasar.mimir.evaluate.MimirQueryFederation
-import quasar.mimir.storage.{MimirIndexedStore, StoreKey}
+import quasar.mimir.storage.{MimirIndexedStore, MimirPTableStore, StoreKey}
 import quasar.run.implicits._
 import quasar.run.optics._
 
@@ -50,18 +51,27 @@ import fs2.{Scheduler, Stream}
 import matryoshka.data.Fix
 import pathy.Path._
 import scalaz.IMap
-import scalaz.syntax.{foldable, functor}, foldable._, functor._
+import scalaz.syntax.foldable._
+import scalaz.syntax.functor._
 import shims._
 import spire.std.double._
 
 final class Quasar[F[_]](
     val datasources: Datasources[F, Stream[F, ?], UUID, Json, SstConfig[Fix[EJson], Double]],
-    val queryEvaluator: QueryEvaluator[F, SqlQuery, Stream[F, Data]])
+    val tables: Tables[F, UUID, SqlQuery, Stream[F, MimirRepr]],
+    val queryEvaluator: QueryEvaluator[F, SqlQuery, Stream[F, MimirRepr]])
 
+@SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
 object Quasar {
   // The location of the datasource refs tables within `mimir`.
   val DatasourceRefsLocation: ADir =
     rootDir </> dir("quasar") </> dir("datasource-refs")
+
+  val TableRefsLocation: ADir =
+    rootDir </> dir("quasar") </> dir("table-refs")
+
+  val PreparationLocation: ADir =
+    rootDir </> dir("quasar") </> dir("preparations")
 
   /** What it says on the tin.
     *
@@ -86,7 +96,7 @@ object Quasar {
         LocalDatasourceModule.kind,
         DatasourceModule.Lightweight(LocalDatasourceModule))
 
-      refs =
+      datasourceRefs =
         MimirIndexedStore.transformValue(
           MimirIndexedStore.transformIndex(
             MimirIndexedStore[F](precog, DatasourceRefsLocation),
@@ -95,7 +105,16 @@ object Quasar {
           "DatasourceRef",
           rValueDatasourceRefP(rValueJsonP))
 
-      configured <- refs.entries.fold(IMap.empty[UUID, DatasourceRef[Json]])(_ + _)
+      tableRefs =
+        MimirIndexedStore.transformValue(
+          MimirIndexedStore.transformIndex(
+            MimirIndexedStore[F](precog, TableRefsLocation),
+            "UUID",
+            StoreKey.stringIso composePrism stringUuidP),
+          "TableRef",
+          rValueTableRefP(rValueSqlQueryP))
+
+      configured <- datasourceRefs.entries.fold(IMap.empty[UUID, DatasourceRef[Json]])(_ + _)
 
       scheduler <- Scheduler(corePoolSize = 1, threadPrefix = "quasar-scheduler")
 
@@ -108,15 +127,37 @@ object Quasar {
 
       freshUUID = ConcurrentEffect[F].delay(UUID.randomUUID)
 
-      datasources = DefaultDatasources(freshUUID, refs, mgmt, mgmt)
+      datasources = DefaultDatasources[F, UUID, Json, SstConfig[Fix[EJson], Double]](
+        freshUUID, datasourceRefs, mgmt, mgmt)
 
       federation = MimirQueryFederation[Fix, F](precog)
 
-      (queryEvaluatorIO: QueryEvaluator[F, SqlQuery, Stream[IO, Data]]) =
+      pTableStore = MimirPTableStore[F](precog, PreparationLocation)
+
+      (queryEvaluatorIO: QueryEvaluator[F, SqlQuery, Stream[IO, MimirRepr]]) =
         Sql2QueryEvaluator(FederatingQueryEvaluator(federation, ResourceRouter(running.get)))
 
       queryEvaluator = queryEvaluatorIO.map(_.translate(λ[IO ~> F](_.to[F])))
 
-    } yield new Quasar(datasources, queryEvaluator)
+      preparationsManager <- PreparationsManager[F, UUID, SqlQuery, Stream[F, MimirRepr]](queryEvaluator) {
+        case (key, table) =>
+          ConcurrentEffect[F].delay {
+            table.flatMap(data =>
+              pTableStore.write(
+                storeKeyUuidP.reverseGet(key),
+                data.table.asInstanceOf[pTableStore.cake.Table])) // yolo
+          }
+      }
+
+      tables = DefaultTables[F, UUID, SqlQuery, Stream[F, MimirRepr]](
+        freshUUID,
+        tableRefs,
+        preparationsManager,
+        key => pTableStore.read(storeKeyUuidP.reverseGet(key))
+          .map(_.map(t =>
+            Stream(MimirRepr(pTableStore.cake)(
+              t.asInstanceOf[pTableStore.cake.Table])).covary[F]))) // yolo x2
+
+    } yield new Quasar(datasources, tables, queryEvaluator)
   }
 }

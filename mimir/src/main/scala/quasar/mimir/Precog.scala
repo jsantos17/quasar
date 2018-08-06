@@ -45,14 +45,15 @@ import scalaz.syntax.apply._
 
 import java.io.File
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.collection.immutable.IndexedSeq
 
 final class Precog private (
     dataDir0: File,
     val actorSystem: ActorSystem,
-    val vfs: SerialVFS[IO])
+    val vfs: SerialVFS[IO])(
+    implicit val ExecutionContext: ExecutionContext)
     extends VFSColumnarTableModule
     with StdLibModule {
 
@@ -87,16 +88,16 @@ final class Precog private (
 
 object Precog extends Logging {
 
-  def apply(dataDir: File): IO[Disposable[IO, Precog]] =
+  def apply(dataDir: File)(implicit ec: ExecutionContext): IO[Disposable[IO, Precog]] =
     for {
-      vfsd <- SerialVFS[IO](dataDir, global)
+      vfsd <- SerialVFS[IO](dataDir, ec)
 
       sysd <- IO {
         val sys = ActorSystem(
           "nihdbExecutorActorSystem",
           classLoader = Some(getClass.getClassLoader))
 
-        Disposable(sys, IO.fromFuture(IO(sys.terminate.map(_ => ()))))
+        Disposable(sys, IO.fromFutureShift(IO(sys.terminate.map(_ => ()))))
       }
 
       pcd <- IO((vfsd |@| sysd) {
@@ -104,6 +105,6 @@ object Precog extends Logging {
       })
     } yield pcd
 
-  def stream(dataDir: File): Stream[IO, Precog] =
+  def stream(dataDir: File)(implicit ec: ExecutionContext): Stream[IO, Precog] =
     Stream.bracket(apply(dataDir))(d => Stream.emit(d.unsafeValue), _.dispose)
 }

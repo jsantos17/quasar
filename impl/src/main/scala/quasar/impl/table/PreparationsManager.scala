@@ -20,6 +20,7 @@ import slamdata.Predef._
 
 import quasar.Condition
 import quasar.api.QueryEvaluator
+import quasar.api.table.PreparationEvent
 
 import cats.effect.{ConcurrentEffect, Effect}
 
@@ -40,7 +41,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class PreparationsManager[F[_]: Effect, I, Q, R] private (
     evaluator: QueryEvaluator[F, Q, R],
-    notificationsQ: Queue[F, Option[PreparationsManager.TableEvent[I]]],
+    notificationsQ: Queue[F, Option[PreparationEvent[I]]],
     background: Stream[F, Nothing] => F[Unit])(
     runToStore: (I, R) => F[Stream[F, Unit]])(
     implicit ec: ExecutionContext) {
@@ -52,7 +53,7 @@ class PreparationsManager[F[_]: Effect, I, Q, R] private (
 
   val F = Effect[F]
 
-  val notifications: Stream[F, TableEvent[I]] = notificationsQ.dequeue.unNoneTerminate
+  val notifications: Stream[F, PreparationEvent[I]] = notificationsQ.dequeue.unNoneTerminate
 
   // fake Equal for fake parametricity
   def prepareTable(tableId: I, query: Q)(implicit I: Equal[I]): F[Condition[InProgressError[I]]] = {
@@ -80,7 +81,7 @@ class PreparationsManager[F[_]: Effect, I, Q, R] private (
 
                 _ <- notificationsQ.enqueue1(
                   Some(
-                    TableEvent.PreparationErrored(
+                    PreparationEvent.PreparationErrored(
                       tableId,
                       start,
                       (end.toEpochSecond - start.toEpochSecond).millis,
@@ -100,7 +101,7 @@ class PreparationsManager[F[_]: Effect, I, Q, R] private (
 
                     _ <- notificationsQ.enqueue1(
                       Some(
-                        TableEvent.PreparationSucceeded(
+                        PreparationEvent.PreparationSucceeded(
                           tableId,
                           start,
                           (end.toEpochSecond - start.toEpochSecond).millis)))
@@ -178,7 +179,7 @@ object PreparationsManager {
         Stream.eval(async.boundedQueue[F, Stream[F, Nothing]](maxStreams))
 
       notificationsQ <-
-        Stream.eval(async.boundedQueue[F, Option[TableEvent[I]]](maxNotifications))
+        Stream.eval(async.boundedQueue[F, Option[PreparationEvent[I]]](maxNotifications))
 
       emit = Stream(new PreparationsManager[F, I, Q, R](evaluator, notificationsQ, q.enqueue1(_))(runToStore))
 
@@ -202,20 +203,5 @@ object PreparationsManager {
     final case class Started(start: OffsetDateTime) extends Status
     case object Pending extends Status
     case object Unknown extends Status
-  }
-
-  sealed trait TableEvent[I] extends Product with Serializable
-
-  object TableEvent {
-    final case class PreparationErrored[I](
-        tableId: I,
-        start: OffsetDateTime,
-        duration: Duration,
-        t: Throwable) extends TableEvent[I]
-
-    final case class PreparationSucceeded[I](
-        tableId: I,
-        start: OffsetDateTime,
-        duration: Duration) extends TableEvent[I]
   }
 }

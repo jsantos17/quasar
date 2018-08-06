@@ -16,22 +16,18 @@
 
 package quasar.api.table
 
-import java.lang.Throwable
-import java.time.{Duration, OffsetDateTime}
-import slamdata.Predef.{Option, Product, Serializable}
+final case class PreparationStatus(prepared: PreparedStatus, ongoing: OngoingStatus)
 
-sealed trait PreparationStatus extends Product with Serializable
+sealed trait PreparedStatus
 
-object PreparationStatus {
-  case object Unprepared
-      extends PreparationStatus
+object PreparedStatus {
+  case object Unprepared extends PreparedStatus
+  case object Prepared extends PreparedStatus
+}
 
-  final case class Preparing(startedAt: OffsetDateTime, previous: Option[Prepared])
-      extends PreparationStatus
+sealed trait OngoingStatus
 
-  final case class Prepared(startedAt: OffsetDateTime, duration: Duration)
-      extends PreparationStatus
-
-  final case class Errored(startedAt: OffsetDateTime, duration: Duration, error: Throwable, previous: Option[Prepared])
-      extends PreparationStatus
+object OngoingStatus {
+  case object NotPreparing extends OngoingStatus
+  case object Preparing extends OngoingStatus
 }
