@@ -132,6 +132,10 @@ class NormalizableT[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] extends T
   def freeMF[A: Equal: Show](fm: Free[MapFunc, A]): Free[MapFunc, A] =
     fm.transCata[Free[MapFunc, A]](MapFuncCore.normalize[T, A])
 
+  // freeMF without the Show constraint
+  def freeMF0[A: Equal](fm: Free[MapFunc, A]): Free[MapFunc, A] =
+    fm.transCata[Free[MapFunc, A]](MapFuncCore.normalize[T, A])
+
   def makeNorm[A, B, C](
     lOrig: A, rOrig: B)(
     left: A => Option[A], right: B => Option[B])(
