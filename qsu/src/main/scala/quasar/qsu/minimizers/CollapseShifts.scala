@@ -701,23 +701,40 @@ final class CollapseShifts[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] pr
       case _ => none
     }
 
+    def inlineStructs(sgs: NEL[ShiftGraph], parent: QSUGraph): NEL[ShiftGraph] = {
+      val (root, fm) = parent match {
+        case Map(g, fm0) => (g, fm0)
+        case _ => (parent, recFunc.Hole)
+      }
+
+      sgs.map {
+        case -\/(QSU.LeftShift(src, struct, idStatus, onUndefined, repair, rot)) if src.root === parent.root =>
+          QSU.LeftShift(root, fm >> struct, idStatus, onUndefined, repair, rot).left
+        case otherwise => otherwise
+      }
+    }
+
     for {
       // converts all candidates to produce final results wrapped in their relevant indices
       wrapped <- candidates.zipWithIndex traverse { case (g, i) => wrapCandidate(g, i) }
 
       coalescedPair <- wrapped.tail.foldLeftM[G, (QSUGraph, Set[Int])](wrapped.head) {
-        case ((ConsecutiveBounded(_, shifts1), leftIndices), (ConsecutiveBounded(_, shifts2), rightIndices)) =>
-          val back = coalesceZip(shifts1.toList.reverse, leftIndices, shifts2.toList.reverse, rightIndices, None)
+        case ((ConsecutiveBounded(parent1, shifts1), leftIndices), (ConsecutiveBounded(parent2, shifts2), rightIndices)) =>
+          val back = coalesceZip(
+            inlineStructs(shifts1, parent1).toList.reverse,
+            leftIndices,
+            inlineStructs(shifts2, parent2).toList.reverse,
+            rightIndices, None)
 
           back.map(g => (inlineMap(g).getOrElse(g), leftIndices ++ rightIndices))
 
-        case ((qgraph, leftIndices), (ConsecutiveBounded(_, shifts), rightIndices)) =>
-          val back = coalesceUneven(shifts, qgraph)
+        case ((qgraph, leftIndices), (ConsecutiveBounded(parent, shifts), rightIndices)) =>
+          val back = coalesceUneven(inlineStructs(shifts, parent), qgraph)
 
           back.map(g => (inlineMap(g).getOrElse(g), leftIndices ++ rightIndices))
 
-        case ((ConsecutiveBounded(_, shifts), leftIndices), (qgraph, rightIndices)) =>
-          val back = coalesceUneven(shifts, qgraph)
+        case ((ConsecutiveBounded(parent, shifts), leftIndices), (qgraph, rightIndices)) =>
+          val back = coalesceUneven(inlineStructs(shifts, parent), qgraph)
 
           back.map(g => (inlineMap(g).getOrElse(g), leftIndices ++ rightIndices))
 
