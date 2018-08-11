@@ -88,7 +88,7 @@ final class CollapseShifts[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] pr
         val rest = reversed.tail
 
         val initM = reversed.head match {
-          case -\/(QSU.LeftShift(_, struct, idStatus, onUndefined, repair, rot)) =>
+          case -\/(QSU.LeftShift(shifting, struct, idStatus, onUndefined, repair, rot)) =>
             val struct2 = struct >> fm.asRec
 
             val repair2 = repair flatMap {
@@ -106,10 +106,17 @@ final class CollapseShifts[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] pr
                 RightTarget[T]
             }
 
-            updateGraph[T, G](QSU.Map(src.root, struct2)).flatMap(sm =>
-              updateGraph[T, G](QSU.LeftShift(sm.root, recFunc.Hole, idStatus, onUndefined, repair2, rot)) map { rewritten =>
-                rewritten :++ src :++ sm
-              })
+            if (struct2 === recFunc.Hole) {
+              updateGraph[T, G](QSU.LeftShift(src.root, struct2, idStatus, onUndefined, repair2, rot)) map { rewritten =>
+                rewritten :++ src
+              }
+            } else {
+              val structMap = QSUGraph.refold(shifting.root, QSU.Map(src, struct2))
+
+              updateGraph[T, G](QSU.LeftShift(shifting.root, recFunc.Hole, idStatus, onUndefined, repair2, rot)) map { rewritten =>
+                rewritten :++ structMap :++ src
+              }
+            }
 
           case \/-(QSU.MultiLeftShift(_, shifts, onUndefined, repair)) =>
             val shifts2 = shifts map {
