@@ -106,11 +106,13 @@ final class CollapseShifts[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] pr
                 RightTarget[T]
             }
 
-            if (struct2 === recFunc.Hole) {
+            if (shifting.root === src.root) {
               updateGraph[T, G](QSU.LeftShift(src.root, struct2, idStatus, onUndefined, repair2, rot)) map { rewritten =>
                 rewritten :++ src
               }
             } else {
+              // We can't generate a new symbol, since that discards the information
+              // telling us two LeftShift structs are the same.
               val structMap = QSUGraph.refold(shifting.root, QSU.Map(src, struct2))
 
               updateGraph[T, G](QSU.LeftShift(shifting.root, recFunc.Hole, idStatus, onUndefined, repair2, rot)) map { rewritten =>
@@ -141,9 +143,17 @@ final class CollapseShifts[T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT] pr
           init <- initM
 
           back <- rest.foldLeftM[G, QSUGraph](init) {
-            case (src, -\/(QSU.LeftShift(_, struct, idStatus, onUndefined, repair, rot))) =>
-              updateGraph[T, G](QSU.LeftShift(src.root, struct, idStatus, onUndefined, repair, rot)) map { rewritten =>
-                rewritten :++ src
+            case (src, -\/(QSU.LeftShift(shifting, struct, idStatus, onUndefined, repair, rot))) =>
+              if (shifting.root === src.root) {
+                updateGraph[T, G](QSU.LeftShift(src.root, struct, idStatus, onUndefined, repair, rot)) map { rewritten =>
+                  rewritten :++ src
+                }
+              } else {
+                val structMap = QSUGraph.refold(shifting.root, QSU.Map(src, struct))
+
+                updateGraph[T, G](QSU.LeftShift(shifting.root, recFunc.Hole, idStatus, onUndefined, repair, rot)) map { rewritten =>
+                  rewritten :++ structMap :++ src
+                }
               }
 
             case (src, \/-(QSU.MultiLeftShift(_, shifts, onUndefined, repair))) =>
