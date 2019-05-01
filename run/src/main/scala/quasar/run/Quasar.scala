@@ -19,11 +19,11 @@ package quasar.run
 import slamdata.Predef._
 
 import quasar.api.QueryEvaluator
-import quasar.api.datasource.{DatasourceRef, Datasources}
+import quasar.api.datasource.{DatasourceRef, Datasources, DestinationRef}
 import quasar.api.resource.ResourcePath
 import quasar.api.table.{TableRef, Tables}
 import quasar.common.PhaseResultTell
-import quasar.connector.{Datasource, QueryResult}
+import quasar.connector.{Datasource, DestinationModule, QueryResult}
 import quasar.contrib.std.uuid._
 import quasar.ejson.EJson
 import quasar.ejson.implicits._
@@ -68,12 +68,14 @@ object Quasar extends Logging {
   /** What it says on the tin. */
   def apply[F[_]: ConcurrentEffect: ContextShift: MonadQuasarErr: PhaseResultTell: Timer, R, S](
       datasourceRefs: IndexedStore[F, UUID, DatasourceRef[Json]],
+      destinationRefs: IndexedStore[F, UUID, DestinationRef[Json]],
       tableRefs: IndexedStore[F, UUID, TableRef[SqlQuery]],
       qscriptEvaluator: LookupRunning[F] => QueryEvaluator[F, Fix[QScriptEducated[Fix, ?]], R],
       preparationsManager: QueryEvaluator[F, SqlQuery, R] => Stream[F, PreparationsManager[F, UUID, SqlQuery, R]],
       lookupTableData: UUID => F[Option[R]],
       lookupTableSchema: UUID => F[Option[S]])(
       datasourceModules: List[DatasourceModule],
+      destinationModules: List[DestinationModule],
       sstEvalConfig: SstEvalConfig)(
       implicit
       ec: ExecutionContext)
