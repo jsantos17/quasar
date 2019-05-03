@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-package quasar.api.datasource
+package quasar.api.destination
 
-import slamdata.Predef.{Boolean, Exception, Option}
+import slamdata.Predef.Exception
 import quasar.Condition
-import quasar.api.SchemaConfig
-import quasar.api.resource._
-
-import scala.concurrent.duration.FiniteDuration
 
 import scalaz.{\/, ISet}
 
@@ -31,16 +27,16 @@ import scalaz.{\/, ISet}
   * @tparam C configuration
   */
 trait Destinations[F[_], G[_], I, C] {
-  import DatasourceError._
+  import DestinationError._
 
   /** Adds the destination described by the given `DestinationRef` to the
     * set of datasources, returning its identifier or an error if it could
     * not be added.
     */
-  def addDestination(ref: DestinationRef[C]): F[CreateError[C] \/ I]
+  def addDestination(ref: DestinationRef[C]): F[CreateError \/ I]
 
   /** Metadata for all destinations. */
-  def allDestinationMetadata: F[G[(I, DatasourceMeta)]]
+  def allDestinationMetadata: F[G[(I, DestinationMeta)]]
 
   /** Returns the reference to the specified destination, or an error if
     * it doesn't exist.
@@ -55,8 +51,8 @@ trait Destinations[F[_], G[_], I, C] {
   def removeDestination(destinationId: I): F[Condition[ExistentialError[I]]]
 
   /** Replaces the reference to the specified destination. */
-  def replaceDestination(destinationId: I, ref: DatasourceRef[C])
-      : F[Condition[DatasourceError[I, C]]]
+  def replaceDestination(destinationId: I, ref: DestinationRef[C])
+      : F[Condition[DestinationError[I, C]]]
 
   /** The set of supported destination types. */
   def supportedDestinationTypes: F[ISet[DestinationType]]

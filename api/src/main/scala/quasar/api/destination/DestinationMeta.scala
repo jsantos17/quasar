@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package quasar.api.datasource
+package quasar.api.destination
 
 import slamdata.Predef.{Exception, Option}
 import quasar.Condition

@@ -16,7 +16,7 @@
 
 package quasar.connector
 
-import quasar.api.datasource.DestinationType
+import quasar.api.destination.DestinationType
 
 import scalaz.NonEmptyList
 

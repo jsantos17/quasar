@@ -43,8 +43,9 @@ object LocalParsedDatasourceModule extends LightweightDatasourceModule with Loca
       implicit ec: ExecutionContext)
       : F[InitializationError[Json] \/ Disposable[F, DS[F]]] = {
     val ds = for {
-      lc <- attemptConfig[F, LocalConfig](config, "Failed to decode LocalDatasource config: ")
-      root <- validatePath(lc.rootDir, config, "Invalid path: ")
+      lc <- attemptConfig[F, LocalConfig, InitializationError[Json]](
+        config, "Failed to decode LocalDatasource config: ")((c, d) => malformedConfiguration((LocalType, c, d)))
+      root <- validatePath(lc.rootDir, config, "Invalid path: ")((c, d) => malformedConfiguration((LocalType, c, d)))
     } yield LocalParsedDatasource[F, RValue](root, lc.readChunkSizeBytes, blockingPool).point[Disposable[F, ?]]
 
     ds.run

@@ -16,7 +16,10 @@
 
 package quasar.impl.datasource.local
 
-import quasar.api.datasource.DatasourceError.InitializationError
+import quasar.api.destination.DestinationError.{
+  InitializationError,
+  malformedConfiguration
+}
 import quasar.concurrent.BlockingContext
 import quasar.connector.{Destination, DestinationModule, MonadResourceErr}
 
@@ -36,8 +39,10 @@ trait LocalDestinationModule extends DestinationModule {
     config: Json)
       : F[InitializationError[Json] \/ Resource[F, Destination[F]]] =
     (for {
-      ld <- attemptConfig[F, LocalDestinationConfig](config, "Failed to decode LocalDestination config: ")
-      root <- validatePath(ld.rootDir, config, "Invalid destination path: ")
+      ld <- attemptConfig[F, LocalDestinationConfig, InitializationError[Json]](
+        config, "Failed to decode LocalDestination config: ")((c, d) => malformedConfiguration((destinationType, c, d)))
+      root <- validatePath(
+        ld.rootDir, config, "Invalid destination path: ")((c, d) => malformedConfiguration((destinationType, c, d)))
 
       dest: Destination[F] = LocalDestination[F](root, blockingPool)
     } yield dest.point[Resource[F, ?]]).run
