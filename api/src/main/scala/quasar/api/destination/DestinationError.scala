@@ -19,7 +19,10 @@ package quasar.api.destination
 import slamdata.Predef._
 
 import monocle.Prism
-import scalaz.{ISet, NonEmptyList}
+import scalaz.std.string._
+import scalaz.syntax.equal._
+import scalaz.syntax.show._
+import scalaz.{Cord, Equal, ISet, NonEmptyList, Show}
 
 sealed trait DestinationError[I, C] extends Product with Serializable
 
@@ -85,4 +88,67 @@ object DestinationError {
     Prism.partial[E, I] {
       case DestinationNotFound(i) => i
     } (DestinationNotFound[I](_))
+
+  implicit def equal[I: Equal, C: Equal]: Equal[DestinationError[I, C]] =
+    Equal.equal {
+      case (e1: CreateError, e2: CreateError) =>
+        (e1, e2) match {
+          case (DestinationUnsupported(k1, s1), DestinationUnsupported(k2, s2)) =>
+            k1 === k2 && s1 === s2
+          case (DestinationNameExists(n1), DestinationNameExists(n2)) =>
+            n1 === n2
+          case _ =>
+            false
+        }
+      case (e1: InitializationError[C], e2: InitializationError[C]) =>
+        (e1, e2) match {
+          case (MalformedConfiguration(k1, c1, r1), MalformedConfiguration(k2, c2, r2)) =>
+            k1 === k2 && c1 === c2 && r1 === r2
+          case (InvalidConfiguration(k1, c1, rs1), InvalidConfiguration(k2, c2, rs2)) =>
+            k1 === k2 && c1 === c2 && rs1 === rs2
+          case (ConnectionFailed(k1, c1, _), ConnectionFailed(k2, c2, _)) =>
+            // ignore exceptions
+            k1 === k2 && c1 === c2
+          case (AccessDenied(k1, c1, r1), AccessDenied(k2, c2, r2)) =>
+            k1 === k2 && c1 === c2 && r1 === r2
+          case _ =>
+            false
+        }
+      case (e1: ExistentialError[I], e2: ExistentialError[I]) =>
+        (e1, e2) match {
+          case (DestinationNotFound(i1), DestinationNotFound(i2)) =>
+            i1 === i2
+          case _ =>
+            false
+        }
+      case _ => false
+    }
+
+  implicit def show[I: Show, C: Show]: Show[DestinationError[I, C]] =
+    Show.show {
+      case e: CreateError => e match {
+        case DestinationUnsupported(kind, supported) =>
+          Cord("DestinationUnsupported(") ++ kind.show ++ Cord(", ") ++ supported.show ++ Cord(")")
+
+        case DestinationNameExists(name) =>
+          Cord("DestinationNameExists(") ++ name.show ++ Cord(")")
+      }
+      case e: InitializationError[C] => e match {
+        case MalformedConfiguration(kind, config, reason) =>
+          Cord("MalformedConfiguration(") ++ kind.show ++ Cord(", ") ++ config.show ++ Cord(", ") ++ Cord(reason) ++ Cord(")")
+
+        case InvalidConfiguration(kind, config, reasons) =>
+          Cord("InvalidConfiguration(") ++ kind.show ++ Cord(", ") ++ config.show ++ Cord(", ") ++ reasons.show ++ Cord(")")
+
+        case ConnectionFailed(kind, config, ex) =>
+          Cord("ConnectionFailed(") ++ kind.show ++ Cord(", ") ++ config.show ++ Cord(s")\n$ex")
+
+        case AccessDenied(kind, config, reason) =>
+          Cord("AccessDenied(") ++ kind.show ++ Cord(", ") ++ config.show ++ Cord(", ") ++ reason.show ++ Cord(")")
+      }
+      case e: ExistentialError[I] => e match {
+        case DestinationNotFound(id) =>
+          Cord("DestinationNotFound(") ++ id.show ++ Cord(")")
+      }
+    }
 }

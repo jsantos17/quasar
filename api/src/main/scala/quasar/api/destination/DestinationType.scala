@@ -32,7 +32,7 @@ import scalaz.std.anyVal._
 import scalaz.std.string._
 import scalaz.std.tuple._
 import scalaz.syntax.show._
-import scalaz.{Cord, Order, Show}
+import scalaz.{Cord, Equal, Order, Show}
 import shapeless.{Witness => W}
 
 @Lenses
@@ -47,6 +47,9 @@ object DestinationType extends DestinationTypeInstances {
 }
 
 sealed abstract class DestinationTypeInstances {
+  implicit val equal: Equal[DestinationType] =
+    Equal.equalBy(t => (t.name, t.version, t.minSupportedVersion))
+
   implicit val order: Order[DestinationType] =
     Order.orderBy(t => (t.name, t.version, t.minSupportedVersion))
 
