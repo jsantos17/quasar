@@ -19,7 +19,8 @@ package quasar.run
 import slamdata.Predef._
 
 import quasar.api.QueryEvaluator
-import quasar.api.datasource.{DatasourceRef, Datasources, DestinationRef}
+import quasar.api.datasource.{DatasourceRef, Datasources}
+import quasar.api.destination.DestinationRef
 import quasar.api.resource.ResourcePath
 import quasar.api.table.{TableRef, Tables}
 import quasar.common.PhaseResultTell
