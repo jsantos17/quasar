@@ -17,12 +17,18 @@
 package quasar.impl.destinations
 
 import quasar.api.destination.DestinationType
-import quasar.connector.{Destination, DestinationModule}
+import quasar.connector.{Destination, DestinationModule, MonadResourceErr}
 
 import cats.effect.concurrent.Ref
 import cats.effect.{ConcurrentEffect, ContextShift, Timer}
-import scalaz.{Order, IMap}
+import scalaz.syntax.applicative._
+import scalaz.{Order, IMap, ISet}
+import shims._
 
-abstract class DefaultDestinationManager[I: Order, C, F[_]: ConcurrentEffect: ContextShift: Timer] (
+abstract class DefaultDestinationManager[I: Order, C, F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer] (
   modules: IMap[DestinationType, DestinationModule],
-  running: Ref[F, IMap[I, Destination[F]]]) extends DestinationManager[I, C, F]
+  running: Ref[F, IMap[I, Destination[F]]]) extends DestinationManager[I, C, F] {
+
+  def supportedDestinationTypes: F[ISet[DestinationType]] =
+    modules.keySet.point[F]
+}
