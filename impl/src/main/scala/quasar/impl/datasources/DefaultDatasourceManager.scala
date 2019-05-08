@@ -27,6 +27,7 @@ import quasar.contrib.scalaz._
 import quasar.fp.ski.κ2
 import quasar.impl.DatasourceModule
 import quasar.impl.datasource.{ByNeedDatasource, FailedDatasource}
+import quasar.impl.IncompatibleModuleException.linkDatasource
 import quasar.qscript.{InterpretedRead, MonadPlannerErr}
 
 import scala.concurrent.ExecutionContext
@@ -134,10 +135,6 @@ object DefaultDatasourceManager {
   type Running[I, T[_[_]], F[_], G[_], R] = IMap[I, Disposable[F, ManagedDatasource[T, F, G, R]]]
   type MonadCreateErr[F[_]] = MonadError_[F, CreateError[Json]]
 
-  final case class IncompatibleDatasourceException(kind: DatasourceType) extends java.lang.RuntimeException {
-    override def getMessage = s"Loaded datasource implementation with type $kind is incompatible with quasar"
-  }
-
   final class Builder[
       I: Order,
       T[_[_]]: BirecursiveT: EqualT: ShowT: RenderTreeT,
@@ -233,13 +230,6 @@ object DefaultDatasourceManager {
           .map(_.map(ManagedDatasource.heavyweight(_)))
     }
 
-  private def handleLinkageError[F[_], A](
-      kind: DatasourceType, fa: => F[A])(
-      implicit F: ApplicativeError[F, Throwable])
-      : F[A] =
-    try {
-      fa
-    } catch {
-      case _: java.lang.LinkageError => F.raiseError(IncompatibleDatasourceException(kind))
-    }
+  private def handleLinkageError[F[_]: ApplicativeError[?[_], Throwable], A](kind: DatasourceType, fa: => F[A]): F[A] =
+    linkDatasource(kind, fa)
 }

@@ -16,18 +16,53 @@
 
 package quasar.impl.destinations
 
-import quasar.api.destination.DestinationType
-import quasar.connector.{Destination, DestinationModule, MonadResourceErr}
+import slamdata.Predef._
 
+import quasar.Condition
+import quasar.api.destination.DestinationError
+import quasar.api.destination.DestinationError.CreateError
+import quasar.api.destination.{DestinationRef, DestinationType}
+import quasar.connector.{Destination, DestinationModule, MonadResourceErr}
+import quasar.impl.IncompatibleModuleException.linkDestination
+
+import argonaut.Json
+import argonaut.Argonaut.jEmptyObject
 import cats.effect.concurrent.Ref
 import cats.effect.{ConcurrentEffect, ContextShift, Timer}
-import scalaz.syntax.applicative._
-import scalaz.{Order, IMap, ISet}
+import scalaz.std.option._
+import scalaz.syntax.monad._
+import scalaz.syntax.unzip._
+import scalaz.{EitherT, IMap, ISet, OptionT, Order, Traverse}
 import shims._
 
-abstract class DefaultDestinationManager[I: Order, C, F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer] (
+abstract class DefaultDestinationManager[I: Order, F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer] (
   modules: IMap[DestinationType, DestinationModule],
-  running: Ref[F, IMap[I, Destination[F]]]) extends DestinationManager[I, C, F] {
+  running: Ref[F, IMap[I, (Destination[F], F[Unit])]]) extends DestinationManager[I, Json, F] {
+
+  def initDestination(destinationId: I, ref: DestinationRef[Json])
+      : F[Condition[CreateError[Json]]] =
+    (for {
+      supported <- EitherT.rightT(supportedDestinationTypes)
+      mod0 = OptionT(
+        Traverse[Option].sequence(
+          modules.lookup(ref.kind).map(m => linkDestination(ref.kind, m.destination[F](ref.config)))))
+
+      mod <- mod0.toRight(DestinationError.destinationUnsupported[CreateError[Json]]((ref.kind, supported)))
+               .flatMap(EitherT.either(_))
+
+      added0 = mod.allocated >>= {
+        case (m, disposeM) =>
+          running.update(r => r.insert(destinationId, (m, disposeM)))
+      }
+      added <- EitherT.rightT(added0)
+    } yield added).run.map(Condition.disjunctionIso.reverseGet(_))
+
+  def destinationOf(destinationId: I): F[Option[Destination[F]]] =
+    running.get.map(_.lookup(destinationId).firsts)
+
+  def sanitizedRef(ref: DestinationRef[Json]): DestinationRef[Json] =
+    modules.lookup(ref.kind).map(_.sanitizeDestinationConfig(ref.config))
+      .fold(ref.copy(config = jEmptyObject))(nc => ref.copy(config = nc))
 
   def supportedDestinationTypes: F[ISet[DestinationType]] =
     modules.keySet.point[F]

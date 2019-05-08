@@ -24,16 +24,16 @@ import scalaz.syntax.equal._
 import scalaz.syntax.show._
 import scalaz.{Cord, Equal, ISet, NonEmptyList, Show}
 
-sealed trait DestinationError[I, C] extends Product with Serializable
+sealed trait DestinationError[+I, +C] extends Product with Serializable
 
 object DestinationError {
-  sealed trait CreateError extends DestinationError[Nothing, Nothing]
+  sealed trait CreateError[+C] extends DestinationError[Nothing, C]
   final case class DestinationUnsupported(kind: DestinationType, supported: ISet[DestinationType])
-      extends CreateError
+      extends CreateError[Nothing]
   final case class DestinationNameExists(name: DestinationName)
-      extends CreateError
+      extends CreateError[Nothing]
 
-  sealed trait InitializationError[C] extends DestinationError[Nothing, C]
+  sealed trait InitializationError[+C] extends CreateError[C]
   final case class MalformedConfiguration[C](kind: DestinationType, config: C, reason: String)
       extends InitializationError[C]
   final case class InvalidConfiguration[C](kind: DestinationType, config: C, reasons: NonEmptyList[String])
@@ -43,17 +43,17 @@ object DestinationError {
   final case class AccessDenied[C](kind: DestinationType, config: C, reason: String)
       extends InitializationError[C]
 
-  sealed trait ExistentialError[I] extends DestinationError[I, Nothing]
+  sealed trait ExistentialError[+I] extends DestinationError[I, Nothing]
   final case class DestinationNotFound[I](destinationId: I)
       extends ExistentialError[I]
 
-  def destinationUnsupported[E >: CreateError <: DestinationError[_, _]]
+  def destinationUnsupported[E >: CreateError[Nothing] <: DestinationError[_, _]]
       : Prism[E, (DestinationType, ISet[DestinationType])] =
     Prism.partial[E, (DestinationType, ISet[DestinationType])] {
       case DestinationUnsupported(k, s) => (k, s)
     } (DestinationUnsupported.tupled)
 
-  def destinationNameExists[E >: CreateError <: DestinationError[_, _]]
+  def destinationNameExists[E >: CreateError[Nothing] <: DestinationError[_, _]]
       : Prism[E, DestinationName] =
     Prism.partial[E, DestinationName] {
       case DestinationNameExists(n) => n
@@ -89,7 +89,7 @@ object DestinationError {
       case DestinationNotFound(i) => i
     } (DestinationNotFound[I](_))
 
-  implicit def equalCreateError: Equal[CreateError] =
+  implicit def equalCreateError[C: Equal]: Equal[CreateError[C]] =
     Equal.equal {
       case (DestinationUnsupported(k1, s1), DestinationUnsupported(k2, s2)) =>
         k1 === k2 && s1 === s2
@@ -124,17 +124,23 @@ object DestinationError {
 
   implicit def equal[I: Equal, C: Equal]: Equal[DestinationError[I, C]] =
     Equal.equal {
-      case (e1: CreateError, e2: CreateError) =>
-        Equal[CreateError].equal(e1, e2)
-      case (e1: InitializationError[C], e2: InitializationError[C]) =>
-        Equal[InitializationError[C]].equal(e1, e2)
+      case (e1: CreateError[C], e2: CreateError[C]) =>
+        (e1, e2) match {
+          case (e1: InitializationError[C], e2: InitializationError[C]) =>
+            Equal[InitializationError[C]].equal(e1, e2)
+          case (e1: CreateError[C], e2: CreateError[C]) =>
+            Equal[CreateError[C]].equal(e1, e2)
+        }
       case (e1: ExistentialError[I], e2: ExistentialError[I]) =>
         Equal[ExistentialError[I]].equal(e1, e2)
       case _ => false
     }
 
-  implicit def showCreateError: Show[CreateError] =
+  implicit def showCreateError[C: Show]: Show[CreateError[C]] =
     Show.show {
+      case e: InitializationError[C] =>
+        Show[InitializationError[C]].show(e)
+
       case DestinationUnsupported(kind, supported) =>
         Cord("DestinationUnsupported(") ++ kind.show ++ Cord(", ") ++ supported.show ++ Cord(")")
 
@@ -165,8 +171,12 @@ object DestinationError {
 
   implicit def show[I: Show, C: Show]: Show[DestinationError[I, C]] =
     Show.show {
-      case e: CreateError => Show[CreateError].show(e)
-      case e: InitializationError[C] => Show[InitializationError[C]].show(e)
+      case e: CreateError[C] => e match {
+        case e: InitializationError[C] =>
+          Show[InitializationError[C]].show(e)
+        case e =>
+          Show[CreateError[C]].show(e)
+      }
       case e: ExistentialError[I] => e match {
         case DestinationNotFound(id) =>
           Cord("DestinationNotFound(") ++ id.show ++ Cord(")")

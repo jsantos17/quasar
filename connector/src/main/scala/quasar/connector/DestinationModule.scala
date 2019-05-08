@@ -26,6 +26,8 @@ import scalaz.\/
 trait DestinationModule {
   def destinationType: DestinationType
 
+  def sanitizeDestinationConfig(config: Json): Json
+
   def destination[F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer](
     config: Json)
     : F[InitializationError[Json] \/ Resource[F, Destination[F]]]

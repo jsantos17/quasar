@@ -31,7 +31,7 @@ trait DestinationManager[I, C, F[_]] {
     * destination exists at `destinationId`, it is shut down.
     */
   def initDestination(destinationId: I, ref: DestinationRef[C])
-      : F[Condition[CreateError]]
+      : F[Condition[CreateError[C]]]
 
   /** Returns the destination having the given id or `None` if not found. */
   def destinationOf(destinationId: I): F[Option[Destination[F]]]

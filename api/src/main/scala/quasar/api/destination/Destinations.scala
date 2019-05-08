@@ -33,7 +33,7 @@ trait Destinations[F[_], G[_], I, C] {
     * set of datasources, returning its identifier or an error if it could
     * not be added.
     */
-  def addDestination(ref: DestinationRef[C]): F[CreateError \/ I]
+  def addDestination(ref: DestinationRef[C]): F[CreateError[C] \/ I]
 
   /** Metadata for all destinations. */
   def allDestinationMetadata: F[G[(I, DestinationMeta)]]
