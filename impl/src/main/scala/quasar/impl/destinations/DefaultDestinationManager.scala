@@ -35,7 +35,7 @@ import scalaz.syntax.unzip._
 import scalaz.{EitherT, IMap, ISet, OptionT, Order, Traverse}
 import shims._
 
-abstract class DefaultDestinationManager[I: Order, F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer] (
+class DefaultDestinationManager[I: Order, F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer] (
   modules: IMap[DestinationType, DestinationModule],
   running: Ref[F, IMap[I, (Destination[F], F[Unit])]]) extends DestinationManager[I, Json, F] {
 
@@ -61,8 +61,16 @@ abstract class DefaultDestinationManager[I: Order, F[_]: ConcurrentEffect: Conte
     running.get.map(_.lookup(destinationId).firsts)
 
   def sanitizedRef(ref: DestinationRef[Json]): DestinationRef[Json] =
+    // return an empty object in case we don't find an appropriate
+    // sanitizeDestinationConfig implementation
     modules.lookup(ref.kind).map(_.sanitizeDestinationConfig(ref.config))
       .fold(ref.copy(config = jEmptyObject))(nc => ref.copy(config = nc))
+
+  def shutdownDestination(destinationId: I): F[Unit] =
+    OptionT(
+      running.modify(r =>
+        (r.delete(destinationId), r.lookup(destinationId).seconds)))
+      .getOrElseF(().point[F].point[F]).join
 
   def supportedDestinationTypes: F[ISet[DestinationType]] =
     modules.keySet.point[F]
