@@ -18,7 +18,7 @@ package quasar.api.destination
 
 import slamdata.Predef.String
 
-import scalaz.{Order, Show}
+import scalaz.{Equal, Order, Show}
 import scalaz.std.string._
 
 final case class DestinationName(value: String)
@@ -26,6 +26,9 @@ final case class DestinationName(value: String)
 object DestinationName extends DestinationNameInstances
 
 sealed abstract class DestinationNameInstances {
+  implicit val equal: Equal[DestinationName] =
+    Equal.equalBy(_.value)
+
   implicit val order: Order[DestinationName] =
     Order.orderBy(_.value)
 

@@ -47,8 +47,8 @@ class DefaultDestinationManager[I: Order, F[_]: ConcurrentEffect: ContextShift: 
         Traverse[Option].sequence(
           modules.lookup(ref.kind).map(m => linkDestination(ref.kind, m.destination[F](ref.config)))))
 
-      mod <- mod0.toRight(DestinationError.destinationUnsupported[CreateError[Json]]((ref.kind, supported)))
-               .flatMap(EitherT.either(_))
+      mod <- mod0.toRight(
+        DestinationError.destinationUnsupported[CreateError[Json]](ref.kind, supported)) >>= (EitherT.either(_))
 
       added0 = mod.allocated >>= {
         case (m, disposeM) =>
@@ -74,4 +74,11 @@ class DefaultDestinationManager[I: Order, F[_]: ConcurrentEffect: ContextShift: 
 
   def supportedDestinationTypes: F[ISet[DestinationType]] =
     modules.keySet.point[F]
+}
+
+object DefaultDestinationManager {
+  def apply[I: Order, F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer](
+    modules: IMap[DestinationType, DestinationModule],
+    running: Ref[F, IMap[I, (Destination[F], F[Unit])]]): DefaultDestinationManager[I, F] =
+    new DefaultDestinationManager[I, F](modules, running)
 }
