@@ -274,17 +274,18 @@ lazy val impl = project
   .settings(
 
     libraryDependencies ++= Seq(
-      "com.slamdata"   %% "fs2-job"                  % fs2JobVersion,
-      "com.slamdata"   %% "qdata-tectonic"           % qdataVersion.value,
-      "com.slamdata"   %% "tectonic-fs2"             % tectonicVersion.value,
-      "org.http4s"     %% "jawn-fs2"                 % jawnfs2Version,
-      "org.slf4s"      %% "slf4s-api"                % slf4sVersion,
-      "io.argonaut"    %% "argonaut-jawn"            % argonautVersion,
-      "org.typelevel"  %% "jawn-util"                % jawnVersion,
-      "io.atomix"      % "atomix"                    % atomixVersion excludeAll(ExclusionRule(organization = "io.netty")),
-      "org.scodec"     %% "scodec-bits"              % scodecBitsVersion,
-      "io.netty"       % "netty-all"                 % nettyVersion,
-      "org.mapdb"      % "mapdb"                     % mapdbVersion,
+      "com.slamdata"   %% "fs2-job"        % fs2JobVersion,
+      "eu.timepit"     %% "fs2-cron-core"  % fs2CronVersion,
+      "com.slamdata"   %% "qdata-tectonic" % qdataVersion.value,
+      "com.slamdata"   %% "tectonic-fs2"   % tectonicVersion.value,
+      "org.http4s"     %% "jawn-fs2"       % jawnfs2Version,
+      "org.slf4s"      %% "slf4s-api"      % slf4sVersion,
+      "io.argonaut"    %% "argonaut-jawn"  % argonautVersion,
+      "org.typelevel"  %% "jawn-util"      % jawnVersion,
+      "io.atomix"      % "atomix"          % atomixVersion excludeAll(ExclusionRule(organization = "io.netty")),
+      "org.scodec"     %% "scodec-bits"    % scodecBitsVersion,
+      "io.netty"       % "netty-all"       % nettyVersion,
+      "org.mapdb"      % "mapdb"           % mapdbVersion,
       // woodstox is added here as a quick and dirty way to get azure working
       // see ch3385 for details
       "com.fasterxml.woodstox" % "woodstox-core" % "6.0.2"))
