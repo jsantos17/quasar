@@ -19,13 +19,12 @@ package quasar.impl.push
 import slamdata.Predef._
 
 import quasar.Condition
-import quasar.api.{Column, ColumnType, Labeled, QueryEvaluator}
+import quasar.api.{Column, ColumnType, Labeled}
 import quasar.api.Label.Syntax._
 import quasar.api.push._
 import quasar.api.resource.ResourcePath
 import quasar.api.table.TableRef
 import quasar.connector.destination._
-import quasar.connector.render.ResultRender
 
 import java.time.Instant
 import java.util.{Map => JMap}
@@ -191,19 +190,12 @@ final class DefaultResultPush[
 object DefaultResultPush {
   def apply[F[_]: Concurrent: Timer, T, D, Q, R](
       lookupTable: T => F[Option[TableRef[Q]]],
-      evaluator: QueryEvaluator[F, Q, Stream[F, R]],
       lookupDestination: D => F[Option[Destination[F]]],
       jobManager: JobManager[F, (D, T), Nothing],
-      render: ResultRender[F, R])
+      runner: PushRunner[F, T, D, Q, R])
       : F[DefaultResultPush[F, T, D, Q, R]] =
     for {
       pushStatus <- Concurrent[F].delay(new ConcurrentHashMap[D, JMap[T, PushMeta]]())
-
-      pushRunner = PushRunner(
-        lookupTable,
-        evaluator,
-        lookupDestination,
-        render)
 
       // we can't keep track of Completed and Failed jobs in this impl, so we consume them from JobManager
       // and update internal state accordingly
@@ -235,7 +227,7 @@ object DefaultResultPush {
               mm
             }))
       }).compile.drain)
-    } yield new DefaultResultPush(lookupTable, lookupDestination, jobManager, pushRunner, pushStatus)
+    } yield new DefaultResultPush(lookupTable, lookupDestination, jobManager, runner, pushStatus)
 
   private def epochToInstant(e: FiniteDuration): Instant =
     Instant.ofEpochMilli(e.toMillis)
