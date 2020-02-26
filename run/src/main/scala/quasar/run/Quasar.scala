@@ -39,7 +39,7 @@ import quasar.impl.datasources._
 import quasar.impl.datasources.middleware._
 import quasar.impl.destinations._
 import quasar.impl.evaluate._
-import quasar.impl.push.{DefaultResultPush, PushRunner}
+import quasar.impl.push.{DefaultResultPush, DefaultPushRunner}
 import quasar.impl.storage.IndexedStore
 import quasar.impl.table.DefaultTables
 import quasar.qscript.{construction, Map => QSMap}
@@ -132,7 +132,7 @@ object Quasar extends Logging {
       lookupDestination: (UUID => F[Option[Destination[F]]]) = destinations.destinationOf(_).map(_.toOption)
       lookupTable: (UUID => F[Option[TableRef[SqlQuery]]]) = tableRefs.lookup
 
-      runner = PushRunner(lookupTable, sqlEvaluator, lookupDestination, resultRender)
+      runner = DefaultPushRunner(lookupTable, sqlEvaluator, lookupDestination, resultRender)
 
       push <- Resource.liftF(DefaultResultPush[F, UUID, UUID, SqlQuery, R](
         lookupTable,

@@ -47,7 +47,7 @@ final class DefaultResultPush[
     lookupTable: T => F[Option[TableRef[Q]]],
     lookupDestination: D => F[Option[Destination[F]]],
     jobManager: JobManager[F, (D, T), Nothing],
-    pushRunner: PushRunner[F, T, D, Q, R],
+    pushRunner: PushRunner[F, T, D],
     pushStatus: JMap[D, JMap[T, PushMeta]])
     extends ResultPush[F, T, D] {
 
@@ -192,7 +192,7 @@ object DefaultResultPush {
       lookupTable: T => F[Option[TableRef[Q]]],
       lookupDestination: D => F[Option[Destination[F]]],
       jobManager: JobManager[F, (D, T), Nothing],
-      runner: PushRunner[F, T, D, Q, R])
+      runner: PushRunner[F, T, D])
       : F[DefaultResultPush[F, T, D, Q, R]] =
     for {
       pushStatus <- Concurrent[F].delay(new ConcurrentHashMap[D, JMap[T, PushMeta]]())

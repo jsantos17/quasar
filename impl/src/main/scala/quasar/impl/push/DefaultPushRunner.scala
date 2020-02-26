@@ -37,12 +37,12 @@ import shims.showToCats
 
 import skolems.∃
 
-final case class PushRunner[
+final case class DefaultPushRunner[
   F[_]: Concurrent: Timer, T, D, Q, R] private (
     lookupTable: T => F[Option[TableRef[Q]]],
     evaluator: QueryEvaluator[F, Q, Stream[F, R]],
     lookupDestination: D => F[Option[Destination[F]]],
-    render: ResultRender[F, R]) {
+    render: ResultRender[F, R]) extends PushRunner[F, T, D] {
 
   def run(
     tableId: T,

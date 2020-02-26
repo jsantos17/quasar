@@ -218,7 +218,7 @@ object DefaultResultPushSpec extends EffectfulQSpec[IO] with ConditionMatchers {
 
     val render = new MockResultRender
 
-    val runner = PushRunner(lookupTable, evaluator, lookupDestination, render)
+    val runner = DefaultPushRunner(lookupTable, evaluator, lookupDestination, render)
 
     DefaultResultPush[IO, Int, Int, String, String](
       lookupTable,
