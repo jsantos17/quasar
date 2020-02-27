@@ -18,18 +18,28 @@ package quasar.impl.scheduler
 
 import slamdata.Predef._
 
-import quasar.api.push.ResultPush
+import fs2.job.JobManager
+
+import quasar.api.push.PushRunner
 import quasar.connector.scheduler.{Scheduler, PushSpec}
 
-import cats.effect.{ConcurrentEffect, ContextShift, Timer}
+import cats.effect.{ConcurrentEffect, ContextShift, Resource, Timer}
+import cats.data.NonEmptyList
 
-final class IntrinsicScheduler[F[_]: ConcurrentEffect: ContextShift: Timer, T, D](
-  resultPush: ResultPush[F, T, D]) extends Scheduler[F, T, D] {
+import fs2.Stream
 
-  type Id = UUID
+final class IntrinsicScheduler[F[_]: ConcurrentEffect: ContextShift: Timer, T, D, I](
+  runner: PushRunner[F, T, D],
+  jobManager: JobManager[F, I, Nothing]) extends Scheduler[F, T, D, I] {
 
-  def schedule(schedule: String, spec: PushSpec[T, D]): F[Id] = ???
+  def schedule(schedule: String, spec: PushSpec[T, D]): F[I] = ???
 
-  def removeSchedule(id: Id): F[Unit] = ???
+  def removeSchedule(id: I): F[Unit] = ???
+}
 
+object IntrinsicScheduler {
+  def apply[F[_]: ConcurrentEffect: ContextShift: Timer, T, D, I](
+    runner: PushRunner[F, T, D],
+    jobManager: JobManager[F, I, Nothing]): Resource[F, Scheduler[F, T, D, I]] =
+    ???
 }

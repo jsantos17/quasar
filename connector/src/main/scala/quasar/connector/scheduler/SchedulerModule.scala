@@ -29,5 +29,5 @@ import cats.effect.{ConcurrentEffect, ContextShift, Timer}
 trait SchedulerModule {
   def scheduler[F[_]: ConcurrentEffect: ContextShift: MonadResourceErr: Timer](
     config: Json)
-      : F[Scheduler[F, UUID, UUID]]
+      : F[Scheduler[F, UUID, UUID, UUID]]
 }

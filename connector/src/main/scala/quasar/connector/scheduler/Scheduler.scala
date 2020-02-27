@@ -18,10 +18,8 @@ package quasar.connector.scheduler
 
 import slamdata.Predef._
 
-trait Scheduler[F[_], T, D] {
-  type Id
+trait Scheduler[F[_], T, D, I] {
+  def schedule(schedule: String, spec: PushSpec[T, D]): F[I]
 
-  def schedule(schedule: String, spec: PushSpec[T, D]): F[Id]
-
-  def removeSchedule(id: Id): F[Unit]
+  def removeSchedule(id: I): F[Unit]
 }
