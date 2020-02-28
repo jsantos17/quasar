@@ -18,8 +18,10 @@ package quasar.connector.scheduler
 
 import slamdata.Predef._
 
+import quasar.api.scheduler.SchedulerError
+
 trait Scheduler[F[_], T, D, I] {
-  def schedule(schedule: String, spec: PushSpec[T, D]): F[I]
+  def schedule(schedule: String, spec: PushSpec[T, D]): F[Either[SchedulerError[T, D], I]]
 
   def removeSchedule(id: I): F[Unit]
 }

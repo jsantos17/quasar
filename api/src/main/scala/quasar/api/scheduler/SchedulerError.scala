@@ -18,15 +18,23 @@ package quasar.api.scheduler
 
 import slamdata.Predef._
 
+
 import quasar.api.push.ResultPushError
 
 import cats.data.NonEmptyList
 
-sealed trait SchedulerError extends Product with Serializable
+sealed trait SchedulerError[+T, +D] extends Product with Serializable
 
 object SchedulerError {
-  final case class InvalidScheduleExpression(expr: String) extends SchedulerError
-  final case class MaxPushesReached(count: Int) extends SchedulerError
+  case class InvalidSchedule(expr: String) extends SchedulerError[Nothing, Nothing]
+  case object ScheduleFailed extends SchedulerError[Nothing, Nothing]
   final case class PushError[T, D](errs: NonEmptyList[ResultPushError[T, D]])
-      extends SchedulerError
+      extends SchedulerError[T, D]
+
+  def scheduleFailed[T, D]: SchedulerError[T, D] =
+    ScheduleFailed
+
+  def invalidSchedule[T, D](expr: String): SchedulerError[T, D] =
+    InvalidSchedule(expr)
+
 }

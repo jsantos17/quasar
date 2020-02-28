@@ -25,5 +25,9 @@ import quasar.api.resource.ResourcePath
 import cats.data.{NonEmptyMap, NonEmptyList}
 
 final case class PushSpec[T, D](
+  tableId: T,
   destinationId: D,
-  tables: NonEmptyMap[T, (NonEmptyList[Column[SelectedType]], ResourcePath, ResultType, Option[Long])])
+  columns: NonEmptyList[Column[SelectedType]],
+  path: ResourcePath,
+  resultType: ResultType,
+  limit: Option[Long])

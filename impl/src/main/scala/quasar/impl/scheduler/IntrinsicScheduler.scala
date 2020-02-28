@@ -18,28 +18,65 @@ package quasar.impl.scheduler
 
 import slamdata.Predef._
 
-import fs2.job.JobManager
+import fs2.job.{Job, JobManager}
 
+import quasar.Condition
 import quasar.api.push.PushRunner
+import quasar.api.scheduler.SchedulerError
 import quasar.connector.scheduler.{Scheduler, PushSpec}
 
 import cats.effect.{ConcurrentEffect, ContextShift, Resource, Timer}
-import cats.data.NonEmptyList
+import cats.data.EitherT
+import cats.implicits._
+
+import cron4s.Cron
+
+import eu.timepit.fs2cron.awakeEveryCron
+
+import java.lang.Throwable
 
 import fs2.Stream
 
-final class IntrinsicScheduler[F[_]: ConcurrentEffect: ContextShift: Timer, T, D, I](
+final case class IntrinsicScheduler[F[_]: ConcurrentEffect: ContextShift: Timer, T, D, I](
   runner: PushRunner[F, T, D],
-  jobManager: JobManager[F, I, Nothing]) extends Scheduler[F, T, D, I] {
+  jobManager: JobManager[F, I, Throwable],
+  nextId: F[I]) extends Scheduler[F, T, D, I] {
 
-  def schedule(schedule: String, spec: PushSpec[T, D]): F[I] = ???
+  def schedule(schedule: String, spec: PushSpec[T, D]): F[Either[SchedulerError[T, D], I]] = {
+    val sch = for {
+      parsedSchedule <- EitherT.fromEither[F](
+        Cron.parse(schedule).leftMap(details => SchedulerError.invalidSchedule(schedule, details)))
 
-  def removeSchedule(id: I): F[Unit] = ???
-}
+      str <- startSpec(spec)
 
-object IntrinsicScheduler {
-  def apply[F[_]: ConcurrentEffect: ContextShift: Timer, T, D, I](
-    runner: PushRunner[F, T, D],
-    jobManager: JobManager[F, I, Nothing]): Resource[F, Scheduler[F, T, D, I]] =
-    ???
+      scheduled = awakeEveryCron(parsedSchedule) >> str.attempt
+
+      id <- EitherT.right[SchedulerError[T, D]](nextId)
+
+      job = Job(id, scheduled)
+
+      submitted <- EitherT.right[SchedulerError[T, D]](jobManager.submit(job))
+
+      _ <- if (submitted)
+        EitherT.pure[F, SchedulerError[T, D]](())
+      else
+        EitherT.leftT[F, Unit](SchedulerError.scheduleFailed[T, D])
+    } yield id
+
+    sch.value
+  }
+
+  def removeSchedule(id: I): F[Unit] =
+    jobManager.cancel(id)
+
+  private def startSpec(spec: PushSpec[T, D])
+      : EitherT[F, SchedulerError[T, D], Stream[F, Unit]] =
+    EitherT(
+      runner.run(
+        spec.tableId,
+        spec.columns,
+        spec.destinationId,
+        spec.path,
+        spec.resultType,
+        spec.limit)).leftMap(err => (SchedulerError.PushError(err): SchedulerError[T, D]))
 }
